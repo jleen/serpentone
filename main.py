@@ -13,8 +13,8 @@ from play import (
     NoteOn,
     PolyphonyManager,
     QwertyHandler,
-    simple_sine,
 )
+from synths import simple_sine
 
 
 def run(input_handler: InputHandler) -> None:
