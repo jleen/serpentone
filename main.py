@@ -14,10 +14,10 @@ from play import (
     PolyphonyManager,
     QwertyHandler,
 )
-from synths import simple_sine
+import synths
 
 
-def run(input_handler: InputHandler) -> None:
+def run(input_handler: InputHandler, synth) -> None:
     """
     Run the script.
     """
@@ -41,7 +41,7 @@ def run(input_handler: InputHandler) -> None:
     exit_future: concurrent.futures.Future[bool] = concurrent.futures.Future()
     # create a server and polyphony manager
     server = supriya.Server()
-    polyphony = PolyphonyManager(server=server, synthdef=simple_sine)
+    polyphony = PolyphonyManager(server=server, synthdef=synth)
     # setup lifecycle callbacks
     server.register_lifecycle_callback('BOOTED', on_boot)
     server.register_lifecycle_callback('QUITTING', on_quitting)
@@ -69,10 +69,14 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
         '--list-midi-inputs', action='store_true', help='list available MIDI inputs'
     )
     group.add_argument(
-        '--use-midi', help='play via MIDI keyboard', type=int, metavar='PORT_NUMBER'
+        '--midi', help='play via MIDI keyboard', type=int, metavar='PORT_NUMBER'
     )
     group.add_argument(
-        '--use-qwerty', action='store_true', help='play via QWERTY keyboard'
+        '--qwerty', action='store_true', help='play via QWERTY keyboard'
+    )
+    parser.add_argument(
+        '--synth', type=str, metavar='SYNTH_NAME', help='name of synthdef to play',
+        default='simple_sine'
     )
     return parser.parse_args(args)
 
@@ -82,13 +86,14 @@ def main(args: list[str] | None = None) -> None:
     The example entry-point function.
     """
     parsed_args = parse_args(args)
+    synth = getattr(synths, parsed_args.synth)
     if parsed_args.list_midi_inputs:
         # print out available MIDI input ports
         rtmidi.midiutil.list_input_ports()
-    elif parsed_args.use_midi is not None:
-        run(MidiHandler(port=parsed_args.use_midi))
-    elif parsed_args.use_qwerty:
-        run(QwertyHandler())
+    elif parsed_args.midi is not None:
+        run(MidiHandler(port=parsed_args.midi), synth)
+    elif parsed_args.qwerty:
+        run(QwertyHandler(), synth)
 
 
 if __name__ == "__main__":
