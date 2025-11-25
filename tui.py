@@ -16,7 +16,7 @@ class StatusPanel(Static):
     def add_message(self, message: str) -> None:
         """Add a status message to the panel."""
         self.messages.append(message)
-        # Keep only the last 20 messages
+        # Keep only the last 20 messages.
         if len(self.messages) > 20:
             self.messages = self.messages[-20:]
         self.update("\n".join(self.messages))

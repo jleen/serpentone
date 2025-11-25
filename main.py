@@ -23,66 +23,66 @@ def run(input_handler: InputHandler, synth) -> None:
     """
     Run the script with TUI.
     """
-    # create the TUI app
+    # Create the TUI app.
     app = SerpentoneApp()
 
-    def on_boot(*args) -> None:  # run this during server.boot()
-        server.add_synthdefs(polyphony.synthdef)  # add the polyphony's synthdef
-        server.sync()  # wait for the synthdef to load before moving on
+    def on_boot(*args) -> None:  # Run this during server.boot().
+        server.add_synthdefs(polyphony.synthdef)  # Add the polyphony's synthdef.
+        server.sync()  # Wait for the synthdef to load before moving on.
         app.call_from_thread(app.add_status, 'Server booted successfully')
 
-    def on_quitting(*args) -> None:  # run this during server.quit()
-        polyphony.free_all()  # free all the synths
-        time.sleep(0.5)  # wait for them to fade out before moving on
+    def on_quitting(*args) -> None:  # Run this during server.quit().
+        polyphony.free_all()  # Free all the synths.
+        time.sleep(0.5)  # Wait for them to fade out before moving on.
         app.call_from_thread(app.add_status, 'Server shutting down')
 
     def note_callback(event: NoteOn | NoteOff, frequency: float) -> None:
-        # update the TUI with note information
+        # Update the TUI with note information.
         if isinstance(event, NoteOn):
             app.call_from_thread(app.add_note, event.note_number, frequency, event.velocity)
         elif isinstance(event, NoteOff):
             app.call_from_thread(app.remove_note, event.note_number)
 
     def input_callback(event: NoteOn | NoteOff) -> None:
-        # just play the event via polyphony directly
+        # Play the event via polyphony directly.
         polyphony.perform(event)
 
     def run_server() -> None:
-        # create a server and polyphony manager
+        # Create a server and polyphony manager.
         nonlocal server, polyphony
         server = supriya.Server()
         polyphony = PolyphonyManager(server=server, synthdef=synth, note_callback=note_callback)
-        # setup lifecycle callbacks
+        # Set up lifecycle callbacks.
         server.register_lifecycle_callback('BOOTED', on_boot)
         server.register_lifecycle_callback('QUITTING', on_quitting)
-        # boot the server
+        # Boot the server.
         server.boot()
         app.call_from_thread(app.add_status, 'Server online. Press Ctrl-C to exit.')
-        # turn on the input handler and teach it to callback against the polyphony manager
+        # Turn on the input handler and teach it to callback against the polyphony manager.
         input_type = type(input_handler).__name__.replace('Handler', '')
         app.call_from_thread(app.add_status, f'Listening for {input_type} keyboard events...')
         with input_handler.listen(callback=input_callback):
-            exit_future.result()  # wait for exit
-        # stop the input handler and quit the server
+            exit_future.result()  # Wait for exit.
+        # Stop the input handler and quit the server.
         server.quit()
 
-    # create shared variables
+    # Create shared variables.
     server = None
     polyphony = None
     exit_future: concurrent.futures.Future[bool] = concurrent.futures.Future()
 
-    # start server in a separate thread
+    # Start server in a separate thread.
     server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()
 
-    # setup signal handler to exit gracefully
+    # Set up signal handler to exit gracefully.
     def signal_handler(*args) -> None:
         exit_future.set_result(True)
         app.exit()
 
     signal.signal(signal.SIGINT, signal_handler)
 
-    # run the TUI app (blocks until exit)
+    # Run the TUI app (blocks until exit).
     app.run()
 
 
