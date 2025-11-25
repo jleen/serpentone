@@ -78,6 +78,8 @@ class PolyphonyManager:
     target_node: supriya.Node | None = None
     # add action to use
     add_action: supriya.AddAction = supriya.AddAction.ADD_TO_HEAD
+    # optional callback for note events
+    note_callback: Callable[[NoteOn | NoteOff, float], None] | None = None
 
     def free_all(self) -> None:
         """
@@ -112,6 +114,9 @@ class PolyphonyManager:
                 synthdef=self.synthdef,
                 target_node=self.target_node,
             )
+            # call the callback if provided
+            if self.note_callback:
+                self.note_callback(event, frequency)
         # if we're stopping a note ...
         elif isinstance(event, NoteOff):
             # bail if we already stopped this note:
@@ -119,6 +124,9 @@ class PolyphonyManager:
                 return
             # pop the synth out of the dictionary and free it ...
             self.notes.pop(event.note_number).free()
+            # call the callback if provided
+            if self.note_callback:
+                self.note_callback(event, 0.0)
 
 
 @dataclass

@@ -9,4 +9,5 @@ dependencies = [
     "pynput>=1.8.1",
     "python-rtmidi>=1.5.8",
     "supriya>=25.9b1",
+    "textual>=6.6.0",
 ]
