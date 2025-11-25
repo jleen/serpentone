@@ -29,7 +29,15 @@ from typing import Callable, Generator
 import pynput
 import rtmidi
 import rtmidi.midiconstants
+import rtmidi.midiutil
 import supriya
+
+
+def list_midi_ports():
+    """
+    Print out available MIDI input ports.
+    """
+    rtmidi.midiutil.list_input_ports()
 
 
 @dataclass

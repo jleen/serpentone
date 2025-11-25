@@ -3,10 +3,10 @@ import concurrent.futures
 import signal
 import time
 
-import rtmidi
 import supriya
 
 from play import (
+    list_midi_ports,
     InputHandler,
     MidiHandler,
     NoteOff,
@@ -88,8 +88,7 @@ def main(args: list[str] | None = None) -> None:
     parsed_args = parse_args(args)
     synth = getattr(synths, parsed_args.synth)
     if parsed_args.list_midi_inputs:
-        # print out available MIDI input ports
-        rtmidi.midiutil.list_input_ports()
+        list_midi_ports()
     elif parsed_args.midi is not None:
         run(MidiHandler(port=parsed_args.midi), synth)
     elif parsed_args.qwerty:
