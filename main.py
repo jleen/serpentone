@@ -43,13 +43,13 @@ def run(input_handler: InputHandler) -> None:
     server = supriya.Server()
     polyphony = PolyphonyManager(server=server, synthdef=simple_sine)
     # setup lifecycle callbacks
-    server.register_lifecycle_callback("BOOTED", on_boot)
-    server.register_lifecycle_callback("QUITTING", on_quitting)
+    server.register_lifecycle_callback('BOOTED', on_boot)
+    server.register_lifecycle_callback('QUITTING', on_quitting)
     # hook up Ctrl-C so we can gracefully shutdown the server
     signal.signal(signal.SIGINT, signal_handler)
     # boot the server and let the user know we're ready to play
     server.boot()
-    print("Server online. Press Ctrl-C to exit.")
+    print('Server online. Press Ctrl-C to exit.')
     # turn on the input handler and teach it to callback against the polyphony manager
     with input_handler.listen(callback=input_callback):
         exit_future.result()  # wait for Ctrl-C
@@ -62,17 +62,17 @@ def parse_args(args: list[str] | None = None) -> argparse.Namespace:
     Parse CLI arguments.
     """
     parser = argparse.ArgumentParser(
-        description="Play notes via your QWERTY or MIDI keyboards"
+        description='Play notes via your QWERTY or MIDI keyboards'
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
-        "--list-midi-inputs", action="store_true", help="list available MIDI inputs"
+        '--list-midi-inputs', action='store_true', help='list available MIDI inputs'
     )
     group.add_argument(
-        "--use-midi", help="play via MIDI keyboard", type=int, metavar="PORT_NUMBER"
+        '--use-midi', help='play via MIDI keyboard', type=int, metavar='PORT_NUMBER'
     )
     group.add_argument(
-        "--use-qwerty", action="store_true", help="play via QWERTY keyboard"
+        '--use-qwerty', action='store_true', help='play via QWERTY keyboard'
     )
     return parser.parse_args(args)
 

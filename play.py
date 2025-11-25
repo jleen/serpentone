@@ -21,7 +21,7 @@ explanation.
 """
 
 import contextlib
-import dataclasses
+from dataclasses import dataclass, field
 import functools
 import random
 from typing import Callable, Generator
@@ -32,7 +32,7 @@ import rtmidi.midiconstants
 import supriya
 
 
-@dataclasses.dataclass
+@dataclass
 class NoteOn:
     """
     A note on event.
@@ -42,7 +42,7 @@ class NoteOn:
     velocity: int
 
 
-@dataclasses.dataclass
+@dataclass
 class NoteOff:
     """
     A note off event.
@@ -51,7 +51,7 @@ class NoteOff:
     note_number: int
 
 
-@dataclasses.dataclass
+@dataclass
 class PolyphonyManager:
     """
     A polyphony manager.
@@ -63,9 +63,9 @@ class PolyphonyManager:
     # the server to act on
     server: supriya.Context
     # a dictionary of MIDI note numbers to synths
-    notes: dict[int, supriya.Synth] = dataclasses.field(default_factory=dict)
+    notes: dict[int, supriya.Synth] = field(default_factory=dict)
     # a synthdef to use when making new synths
-    synthdef: supriya.SynthDef = dataclasses.field(default=supriya.default)
+    synthdef: supriya.SynthDef = field(default=supriya.default)
     # target node to add relative to
     target_node: supriya.Node | None = None
     # add action to use
@@ -85,12 +85,10 @@ class PolyphonyManager:
         Perform a :py:class:`NoteOn` or :py:class:`NoteOff` event.
         """
         # if we're starting a note ...
-        print('hi')
         if isinstance(event, NoteOn):
             # bail if we already started this note
             if event.note_number in self.notes:
                 return
-            print(f"Performing {event}")
             # convert MIDI 0-127 to frequency in Hertz
             frequency = supriya.conversions.midi_note_number_to_frequency(
                 event.note_number
@@ -111,12 +109,11 @@ class PolyphonyManager:
             # bail if we already stopped this note:
             if event.note_number not in self.notes:
                 return
-            print(f"Performing {event}")
             # pop the synth out of the dictionary and free it ...
             self.notes.pop(event.note_number).free()
 
 
-@dataclasses.dataclass
+@dataclass
 class InputHandler:
     """
     Base class for input handlers.
@@ -133,7 +130,7 @@ class InputHandler:
         raise NotImplementedError
 
 
-@dataclasses.dataclass
+@dataclass
 class MidiHandler(InputHandler):
     """
     A MIDI input handler.
@@ -152,7 +149,7 @@ class MidiHandler(InputHandler):
         # set the MIDI event callback to this class's __call__
         self.midi_input.set_callback(functools.partial(self.handle, callback))
         self.midi_input.open_port(self.port)  # open the port for listening
-        print("Listening for MIDI keyboard events ...")  # let the user know
+        print('Listening for MIDI keyboard events ...')  # let the user know
         yield  # yield to the with block body
         self.midi_input.close_port()  # close the port
 
@@ -165,7 +162,6 @@ class MidiHandler(InputHandler):
         """
         Handle a MIDI input event.
         """
-        print(f"MIDI received: {event}")
         # the raw MIDI event is a 2-tuple of MIDI data and time delta, so
         # unpack it, keep the data and discard the time delta ...
         data, _ = event
@@ -174,21 +170,23 @@ class MidiHandler(InputHandler):
             _, note_number, velocity = data
             # perform a "note on" event
             callback(NoteOn(note_number=note_number, velocity=velocity))
-        elif data[0] == rtmidi.midiconstants.NOTE_OFF + 1:  # if we received a note-off ...
+        elif (
+            data[0] == rtmidi.midiconstants.NOTE_OFF + 1
+        ):  # if we received a note-off ...
             # grab the note number
             _, note_number, _ = data
             # perform a "note off" event
             callback(NoteOff(note_number=note_number))
 
 
-@dataclasses.dataclass
+@dataclass
 class QwertyHandler(InputHandler):
     """
     A QWERTY input handler.
     """
 
     octave: int = 5
-    presses_to_note_numbers: dict[str, int] = dataclasses.field(default_factory=dict)
+    presses_to_note_numbers: dict[str, int] = field(default_factory=dict)
 
     @contextlib.contextmanager
     def listen(
@@ -203,7 +201,7 @@ class QwertyHandler(InputHandler):
             on_release=functools.partial(self.on_release, callback),
         )
         self.listener.start()  # start the listener
-        print("Listening for QWERTY keyboard events ...")  # let the user know
+        print('Listening for QWERTY keyboard events ...')  # let the user know
         yield  # yield to the with block body
         self.listener.stop()  # stop the listener
 
@@ -228,13 +226,12 @@ class QwertyHandler(InputHandler):
         """
         if not isinstance(key, pynput.keyboard.KeyCode):
             return  # bail if we didn't get a keycode object
-        print(f"QWERTY pressed: {key.char}")
         if key.char is None:
             return
-        if key.char == "z":  # decrement our octave setting
+        if key.char == 'z':  # decrement our octave setting
             self.octave = max(self.octave - 1, 0)
             return
-        if key.char == "x":  # increment our octave setting
+        if key.char == 'x':  # increment our octave setting
             self.octave = min(self.octave + 1, 10)
             return
         if key in self.presses_to_note_numbers:
@@ -262,7 +259,6 @@ class QwertyHandler(InputHandler):
         """
         if not isinstance(key, pynput.keyboard.KeyCode):
             return  # bail if we didn't get a keycode object
-        print(f"QWERTY released: {key.char}")
         # bail if the key isn't currently held down
         if key.char not in self.presses_to_note_numbers:
             return
