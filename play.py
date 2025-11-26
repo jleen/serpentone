@@ -31,6 +31,7 @@ import rtmidi
 import rtmidi.midiconstants
 import rtmidi.midiutil
 import supriya
+import supriya.conversions
 
 
 def list_midi_ports():
@@ -160,7 +161,7 @@ class MidiHandler(InputHandler):
         """
         Context manager for listening to MIDI input events.
         """
-        self.midi_input = rtmidi.MidiIn()  # Create the MIDI input.
+        self.midi_input = rtmidi.MidiIn()  # type: ignore
         # Set the MIDI event callback to this class's handle method.
         self.midi_input.set_callback(functools.partial(self.handle, callback))
         self.midi_input.open_port(self.port)  # Open the port for listening.
