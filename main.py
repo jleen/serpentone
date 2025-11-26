@@ -21,9 +21,6 @@ def run(input_handler: InputHandler, synth) -> None:
     """
     Run the script with TUI.
     """
-    # Create the TUI app.
-    app = SerpentoneApp()
-
     def on_boot(*args) -> None:  # Run this during server.boot().
         server.add_synthdefs(polyphony.synthdef)  # Add the polyphony's synthdef.
         server.sync()  # Wait for the synthdef to load before moving on.
@@ -46,28 +43,26 @@ def run(input_handler: InputHandler, synth) -> None:
         polyphony.perform(event)
 
     def run_server() -> None:
-        # Set up lifecycle callbacks.
         server.register_lifecycle_callback('BOOTED', on_boot)
         server.register_lifecycle_callback('QUITTING', on_quitting)
-        # Boot the server.
         server.boot()
         app.add_status('Server online. Press Ctrl-C to exit.')
-        # Turn on the input handler and teach it to callback against the polyphony manager.
         input_type = type(input_handler).__name__.replace('Handler', '')
         app.add_status(f'Listening for {input_type} keyboard events...')
         listener = input_handler.listen(callback=input_callback)
         listener.__enter__()
-        # Stop the input handler and quit the server.
+
+    def spawn_server_thread() -> None:
+        # The input handler needs to run in a separate thread,
+        # so that it doesn’t block the Textual event pump.
+        server_thread = threading.Thread(target=run_server, daemon=True)
+        server_thread.start()
 
     server = supriya.Server()
     polyphony = PolyphonyManager(server=server, synthdef=synth, note_callback=note_callback)
 
-    # Start server in a separate thread.
-    server_thread = threading.Thread(target=run_server, daemon=True)
-    server_thread.start()
-
-    # Run the TUI app (blocks until exit).
-    app.run()
+    app = SerpentoneApp(spawn_server_thread)
+    app.run()  # Blocks until user quits.
     server.quit()
 
 

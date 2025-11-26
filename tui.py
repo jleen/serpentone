@@ -88,10 +88,11 @@ class SerpentoneApp(App):
     }
     """
 
-    def __init__(self):
+    def __init__(self, init):
         super().__init__()
         self.status_panel = None
         self.note_panel = None
+        self.init = init
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
@@ -104,7 +105,8 @@ class SerpentoneApp(App):
 
     def on_mount(self) -> None:
         """Handle app mount."""
-        self.title = "DoItLive"
+        self.title = "Serpentone"
+        self.init()
 
     def add_status(self, message: str) -> None:
         """Add a status message."""
