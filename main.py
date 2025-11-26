@@ -57,6 +57,7 @@ def run(input_handler: InputHandler, synth) -> None:
         with input_handler.listen(callback=input_callback):
             exit_future.result()  # Wait for exit.
         print('Input listener stopped')
+        shutdown_future.set_result(True)
 
     def spawn_server_thread() -> None:
         # The input handler needs to run in a separate thread,
@@ -69,6 +70,7 @@ def run(input_handler: InputHandler, synth) -> None:
     server = supriya.Server()
     polyphony = PolyphonyManager(server=server, synthdef=synth, note_callback=note_callback)
     exit_future = Future()
+    shutdown_future = Future()
 
     app = SerpentoneApp(spawn_server_thread)
     # app.run starts an async event pump on the main thread, and mounts the Textual app.
@@ -91,18 +93,22 @@ def run(input_handler: InputHandler, synth) -> None:
     # server.quit directly stops Supercollider, which in turn calls back to on_quitting,
     # which will resolve the Future and thereby tell the listener babysitter thread to shut down the listener.
     #
-    # Everything gets shut down cleanly, but the order seems a bit nondeterministic.
-    # The Future is resolved before Supercollider is allowed to quit, which is good.
-    # And server.quit blocks until the on_quitting callback has completed, which is also good.
+    # Everything gets shut down cleanly, and I *think* the order is deterministic.
+    # We use two futures to synchronize shutdown:
+    #   - exit_future is how the Supercollider lifecycle callback tells the babysitter to shut down.
+    #   - shutdown_future is how the babysitter tells the main thread to shut down.
     #
-    # But the Future is being awaited (and the listener will be torn down) on a different thread,
-    # so there is potentially a race condition whereby the listener might briefly linger
-    # after Supercollider has been shut down.  The most obvious symptom would be a listener shutdown display
-    # that appears after the Supercollider shutdown display (or not at all, if the process exits without waiting).
+    # exit_future is resolved before on_quitting returns, which has to happen before Supercollider is allowed to quit.
+    # And server.quit blocks until the on_quitting callback has completed.
+    # At this point, the babysitter has been told to shut down.
+    # And then, here on the main thread, we wait until the babysitter tells us that the listener shutdown is complete.
     #
-    # This seems fairly benign, yet annoying.
-    # If we really cared, I suppose we could use another future to wait here until the babysitter is done.
+    # If this is all working as intended, you should always see these three messages in this order:
+    #   - Supercollider shutting down
+    #   - Input listener stopped
+    #   - That’s all, folks!
     server.quit()
+    shutdown_future.result()
     print('That’s all, folks!')
 
 
