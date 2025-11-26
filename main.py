@@ -55,6 +55,8 @@ def run(input_handler: InputHandler, synth) -> None:
     def spawn_server_thread() -> None:
         # The input handler needs to run in a separate thread,
         # so that it doesn’t block the Textual event pump.
+        # Additionally, server.boot needs to not be on the Textual thread,
+        # for reasons that are not clear to me.
         server_thread = threading.Thread(target=run_server, daemon=True)
         server_thread.start()
 
