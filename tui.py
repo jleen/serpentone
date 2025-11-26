@@ -58,7 +58,7 @@ class NotePanel(Static):
 
 
 class SerpentoneApp(App):
-    """Main Textual application for DoItLive."""
+    """Main Textual application for Serpentone."""
 
     CSS = """
     Screen {

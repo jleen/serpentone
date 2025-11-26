@@ -2,6 +2,7 @@ import argparse
 import threading
 import time
 
+from concurrent.futures import Future
 import supriya
 
 from play import (
@@ -29,7 +30,8 @@ def run(input_handler: InputHandler, synth) -> None:
     def on_quitting(*args) -> None:  # Run this during server.quit().
         polyphony.free_all()  # Free all the synths.
         time.sleep(0.5)  # Wait for them to fade out before moving on.
-        #app.call_from_thread(app.add_status, 'Server shutting down')
+        print('Supercollider shutting down')
+        exit_future.set_result(True)
 
     def note_callback(event: NoteOn | NoteOff, frequency: float) -> None:
         # Update the TUI with note information.
@@ -49,8 +51,9 @@ def run(input_handler: InputHandler, synth) -> None:
         app.add_status('Server online. Press Ctrl-C to exit.')
         input_type = type(input_handler).__name__.replace('Handler', '')
         app.add_status(f'Listening for {input_type} keyboard events...')
-        listener = input_handler.listen(callback=input_callback)
-        listener.__enter__()
+        with input_handler.listen(callback=input_callback):
+            exit_future.result()  # Wait for exit.
+        print('Input listener stopped')
 
     def spawn_server_thread() -> None:
         # The input handler needs to run in a separate thread,
@@ -62,6 +65,7 @@ def run(input_handler: InputHandler, synth) -> None:
 
     server = supriya.Server()
     polyphony = PolyphonyManager(server=server, synthdef=synth, note_callback=note_callback)
+    exit_future = Future()
 
     app = SerpentoneApp(spawn_server_thread)
     app.run()  # Blocks until user quits.
@@ -108,3 +112,4 @@ def main(args: list[str] | None = None) -> None:
 
 if __name__ == "__main__":
     main()
+    print('That’s all, folks!')
