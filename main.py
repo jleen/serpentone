@@ -27,7 +27,10 @@ def run(input_handler: InputHandler, synth) -> None:
         server.sync()  # Wait for the synthdef to load before moving on.
         app.call_from_thread(app.add_status, 'Server booted successfully')
 
-    def on_quitting(*args) -> None:  # Run this during server.quit().
+    def on_quitting(*args) -> None:
+        """
+        Callback that occurs *before* Supercollider quits via server.quit.
+        """
         polyphony.free_all()  # Free all the synths.
         time.sleep(0.5)  # Wait for them to fade out before moving on.
         print('Supercollider shutting down')
@@ -68,8 +71,39 @@ def run(input_handler: InputHandler, synth) -> None:
     exit_future = Future()
 
     app = SerpentoneApp(spawn_server_thread)
-    app.run()  # Blocks until user quits.
+    # app.run starts an async event pump on the main thread, and mounts the Textual app.
+    # The app itself, on mount, is configured to call back to spawn_server_thread to initialize
+    # Supercollider and the input listener thread.
+    #
+    # This listener thread is actually spawned on yet another thread which is internal to rtmidi,
+    # but our Python thread hands out and babysits the listener, and waits for a Future which is 
+    # how the Textual app (in the main thread) tells it when it’s time to shut down.
+    #
+    # Meanwhile, the main thread will run the actual app logic, and will block here until the app quits.
+    #
+    # I am fairly confident that there are no race conditions at this point,
+    # because the initialization thread is not spawned until the app is mounted,
+    # and the input listener is not started until Supercollider is booted.
+    app.run()
+    # Okay, at this point the Textual event pump has been shut down, so we’re back to synchronous execution
+    # on the main thread. Supercollider, the listener, and the babysitter are still running.
+    #
+    # server.quit directly stops Supercollider, which in turn calls back to on_quitting,
+    # which will resolve the Future and thereby tell the listener babysitter thread to shut down the listener.
+    #
+    # Everything gets shut down cleanly, but the order seems a bit nondeterministic.
+    # The Future is resolved before Supercollider is allowed to quit, which is good.
+    # And server.quit blocks until the on_quitting callback has completed, which is also good.
+    #
+    # But the Future is being awaited (and the listener will be torn down) on a different thread,
+    # so there is potentially a race condition whereby the listener might briefly linger
+    # after Supercollider has been shut down.  The most obvious symptom would be a listener shutdown display
+    # that appears after the Supercollider shutdown display (or not at all, if the process exits without waiting).
+    #
+    # This seems fairly benign, yet annoying.
+    # If we really cared, I suppose we could use another future to wait here until the babysitter is done.
     server.quit()
+    print('That’s all, folks!')
 
 
 def parse_args(args: list[str] | None = None) -> argparse.Namespace:
@@ -112,4 +146,3 @@ def main(args: list[str] | None = None) -> None:
 
 if __name__ == "__main__":
     main()
-    print('That’s all, folks!')
