@@ -24,29 +24,28 @@ def run(input_handler: InputHandler, synth) -> None:
     # Create the TUI app.
     app = SerpentoneApp()
 
-    def run_server(server) -> None:
-        def on_boot(*args) -> None:  # Run this during server.boot().
-            server.add_synthdefs(polyphony.synthdef)  # Add the polyphony's synthdef.
-            server.sync()  # Wait for the synthdef to load before moving on.
-            app.call_from_thread(app.add_status, 'Server booted successfully')
+    def on_boot(*args) -> None:  # Run this during server.boot().
+        server.add_synthdefs(polyphony.synthdef)  # Add the polyphony's synthdef.
+        server.sync()  # Wait for the synthdef to load before moving on.
+        app.call_from_thread(app.add_status, 'Server booted successfully')
 
-        def on_quitting(*args) -> None:  # Run this during server.quit().
-            polyphony.free_all()  # Free all the synths.
-            time.sleep(0.5)  # Wait for them to fade out before moving on.
-            #app.call_from_thread(app.add_status, 'Server shutting down')
+    def on_quitting(*args) -> None:  # Run this during server.quit().
+        polyphony.free_all()  # Free all the synths.
+        time.sleep(0.5)  # Wait for them to fade out before moving on.
+        #app.call_from_thread(app.add_status, 'Server shutting down')
 
-        def note_callback(event: NoteOn | NoteOff, frequency: float) -> None:
-            # Update the TUI with note information.
-            if isinstance(event, NoteOn):
-                app.call_from_thread(app.add_note, event.note_number, frequency, event.velocity)
-            elif isinstance(event, NoteOff):
-                app.call_from_thread(app.remove_note, event.note_number)
+    def note_callback(event: NoteOn | NoteOff, frequency: float) -> None:
+        # Update the TUI with note information.
+        if isinstance(event, NoteOn):
+            app.call_from_thread(app.add_note, event.note_number, frequency, event.velocity)
+        elif isinstance(event, NoteOff):
+            app.call_from_thread(app.remove_note, event.note_number)
 
-        def input_callback(event: NoteOn | NoteOff) -> None:
-            # Play the event via polyphony directly.
-            polyphony.perform(event)
+    def input_callback(event: NoteOn | NoteOff) -> None:
+        # Play the event via polyphony directly.
+        polyphony.perform(event)
 
-        polyphony = PolyphonyManager(server=server, synthdef=synth, note_callback=note_callback)
+    def run_server() -> None:
         # Set up lifecycle callbacks.
         server.register_lifecycle_callback('BOOTED', on_boot)
         server.register_lifecycle_callback('QUITTING', on_quitting)
@@ -60,9 +59,11 @@ def run(input_handler: InputHandler, synth) -> None:
         listener.__enter__()
         # Stop the input handler and quit the server.
 
-    # Start server in a separate thread.
     server = supriya.Server()
-    server_thread = threading.Thread(target=run_server, args=[server], daemon=True)
+    polyphony = PolyphonyManager(server=server, synthdef=synth, note_callback=note_callback)
+
+    # Start server in a separate thread.
+    server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()
 
     # Run the TUI app (blocks until exit).
