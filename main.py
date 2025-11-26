@@ -51,10 +51,10 @@ def run(input_handler: InputHandler, synth) -> None:
         server.register_lifecycle_callback('QUITTING', on_quitting)
         # Boot the server.
         server.boot()
-        app.call_from_thread(app.add_status, 'Server online. Press Ctrl-C to exit.')
+        app.add_status('Server online. Press Ctrl-C to exit.')
         # Turn on the input handler and teach it to callback against the polyphony manager.
         input_type = type(input_handler).__name__.replace('Handler', '')
-        app.call_from_thread(app.add_status, f'Listening for {input_type} keyboard events...')
+        app.add_status(f'Listening for {input_type} keyboard events...')
         listener = input_handler.listen(callback=input_callback)
         listener.__enter__()
         # Stop the input handler and quit the server.
