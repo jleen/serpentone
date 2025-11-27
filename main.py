@@ -25,7 +25,7 @@ def run(input_handler: InputHandler, synth) -> None:
     def on_boot(*args) -> None:  # Run this during server.boot().
         server.add_synthdefs(polyphony.synthdef)  # Add the polyphony's synthdef.
         server.sync()  # Wait for the synthdef to load before moving on.
-        app.call_from_thread(app.add_status, 'Server booted successfully')
+        #app.call_from_thread(app.add_status, 'Server booted successfully')
 
     def on_quitting(*args) -> None:
         """
@@ -34,7 +34,8 @@ def run(input_handler: InputHandler, synth) -> None:
         polyphony.free_all()  # Free all the synths.
         time.sleep(0.5)  # Wait for them to fade out before moving on.
         print('Supercollider shutting down')
-        exit_future.set_result(True)
+        listener.__exit__(None, None, None)
+        print('Input listener stopped')
 
     def note_callback(event: NoteOn | NoteOff, frequency: float) -> None:
         # Update the TUI with note information.
@@ -47,68 +48,26 @@ def run(input_handler: InputHandler, synth) -> None:
         # Play the event via polyphony directly.
         polyphony.perform(event)
 
-    def run_server() -> None:
+    def spawn_server_thread() -> None:
         server.register_lifecycle_callback('BOOTED', on_boot)
         server.register_lifecycle_callback('QUITTING', on_quitting)
         server.boot()
         app.add_status('Server online. Press C-q to exit.')
         input_type = type(input_handler).__name__.replace('Handler', '')
         app.add_status(f'Listening for {input_type} keyboard events...')
-        with input_handler.listen(callback=input_callback):
-            exit_future.result()  # Wait for exit.
-        print('Input listener stopped')
-        shutdown_future.set_result(True)
+        listener.__enter__()
 
-    def spawn_server_thread() -> None:
-        # The input handler needs to run in a separate thread,
-        # so that it doesn’t block the Textual event pump.
-        # Additionally, server.boot needs to not be on the Textual thread,
-        # for reasons that are not clear to me.
-        server_thread = threading.Thread(target=run_server, daemon=True)
-        server_thread.start()
-
+    listener = input_handler.listen(callback=input_callback)
     server = supriya.Server()
     polyphony = PolyphonyManager(server=server, synthdef=synth, note_callback=note_callback)
-    exit_future = Future()
-    shutdown_future = Future()
 
     app = SerpentoneApp(spawn_server_thread)
-    # app.run starts an async event pump on the main thread, and mounts the Textual app.
-    # The app itself, on mount, is configured to call back to spawn_server_thread to initialize
-    # Supercollider and the input listener thread.
-    #
-    # This listener thread is actually spawned on yet another thread which is internal to rtmidi,
-    # but our Python thread hands out and babysits the listener, and waits for a Future which is 
-    # how the Textual app (in the main thread) tells it when it’s time to shut down.
-    #
-    # Meanwhile, the main thread will run the actual app logic, and will block here until the app quits.
-    #
-    # I am fairly confident that there are no race conditions at this point,
-    # because the initialization thread is not spawned until the app is mounted,
-    # and the input listener is not started until Supercollider is booted.
     app.run()
     # Okay, at this point the Textual event pump has been shut down, so we’re back to synchronous execution
-    # on the main thread. Supercollider, the listener, and the babysitter are still running.
-    #
-    # server.quit directly stops Supercollider, which in turn calls back to on_quitting,
-    # which will resolve the Future and thereby tell the listener babysitter thread to shut down the listener.
-    #
-    # Everything gets shut down cleanly, and I *think* the order is deterministic.
-    # We use two futures to synchronize shutdown:
-    #   - exit_future is how the Supercollider lifecycle callback tells the babysitter to shut down.
-    #   - shutdown_future is how the babysitter tells the main thread to shut down.
-    #
-    # exit_future is resolved before on_quitting returns, which has to happen before Supercollider is allowed to quit.
-    # And server.quit blocks until the on_quitting callback has completed.
-    # At this point, the babysitter has been told to shut down.
-    # And then, here on the main thread, we wait until the babysitter tells us that the listener shutdown is complete.
-    #
-    # If this is all working as intended, you should always see these three messages in this order:
-    #   - Supercollider shutting down
-    #   - Input listener stopped
-    #   - That’s all, folks!
+    # on the main thread. Supercollider and the input listener are still running.
+    # So now we directly stop Supercollider, which in turn calls back to on_quitting,
+    # which will shut down the listener.
     server.quit()
-    shutdown_future.result()
     print('That’s all, folks!')
 
 
