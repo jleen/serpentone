@@ -55,12 +55,16 @@ def run(input_handler: InputHandler, synth) -> None:
         app.add_status(f'Listening for {input_type} keyboard events...')
         listener.__enter__()
 
+    # First we wire up some objects. Nothing exciting happens yet.
     listener = input_handler.listen(callback=input_callback)
     server = supriya.Server()
     polyphony = PolyphonyManager(server=server, synthdef=synth, note_callback=note_callback)
-
     app = SerpentoneApp(start_server_and_listener)
+
+    # Now we run the Textual app, which starts the event pump.
+    # The app has an on_mount callback that will start Supercollider and the input listener.
     app.run()
+
     # Okay, at this point the Textual event pump has been shut down, so we’re back to synchronous execution
     # on the main thread. Supercollider and the input listener are still running.
     # So now we directly stop Supercollider, which in turn calls back to on_quitting,
