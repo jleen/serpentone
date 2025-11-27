@@ -46,6 +46,9 @@ def run(input_handler: InputHandler, synth) -> None:
         # Play the event via polyphony directly.
         polyphony.perform(event)
 
+    def status_callback(msg):
+        app.call_from_thread(app.add_status, msg)
+
     def start_server_and_listener() -> None:
         server.register_lifecycle_callback('BOOTED', on_boot)
         server.register_lifecycle_callback('QUITTING', on_quitting)
@@ -56,7 +59,7 @@ def run(input_handler: InputHandler, synth) -> None:
         listener.__enter__()
 
     # First we wire up some objects. Nothing exciting happens yet.
-    listener = input_handler.listen(callback=input_callback)
+    listener = input_handler.listen(callback=input_callback, status=status_callback)
     server = supriya.Server()
     polyphony = PolyphonyManager(server=server, synthdef=synth, note_callback=note_callback)
     app = SerpentoneApp(start_server_and_listener)

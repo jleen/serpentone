@@ -153,19 +153,21 @@ class MidiHandler(InputHandler):
     """
 
     port: int | str
+    status_callback: Callable[[str]]
 
     @contextlib.contextmanager
     def listen(
-        self, callback: Callable[[NoteOn | NoteOff], None]
+        self, callback: Callable[[NoteOn | NoteOff], None], status
     ) -> Generator[None, None, None]:
         """
         Context manager for listening to MIDI input events.
         """
+        self.status = status
         self.midi_input = rtmidi.MidiIn()  # type: ignore
         # Set the MIDI event callback to this class's handle method.
         self.midi_input.set_callback(functools.partial(self.handle, callback))
         self.midi_input.open_port(self.port)  # Open the port for listening.
-        print('Listening for MIDI keyboard events ...')  # Let the user know.
+        #self.status('Listening for MIDI keyboard events ...')  # Let the user know.
         yield  # Yield to the with block body.
         self.midi_input.close_port()  # Close the port.
 
@@ -181,13 +183,14 @@ class MidiHandler(InputHandler):
         # The raw MIDI event is a 2-tuple of MIDI data and time delta.
         # Unpack it, keep the data and discard the time delta.
         data, _ = event
-        if data[0] == rtmidi.midiconstants.NOTE_ON + 1:  # If we received a note-on.
+        self.status(str(data))
+        if data[0] == rtmidi.midiconstants.NOTE_ON:  # If we received a note-on.
             # Grab the note number and velocity.
             _, note_number, velocity = data
             # Perform a "note on" event.
             callback(NoteOn(note_number=note_number, velocity=velocity))
         elif (
-            data[0] == rtmidi.midiconstants.NOTE_OFF + 1
+            data[0] == rtmidi.midiconstants.NOTE_OFF
         ):  # If we received a note-off.
             # Grab the note number.
             _, note_number, _ = data
