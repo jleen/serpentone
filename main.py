@@ -51,7 +51,7 @@ def run(input_handler: InputHandler, synth) -> None:
         server.register_lifecycle_callback('BOOTED', on_boot)
         server.register_lifecycle_callback('QUITTING', on_quitting)
         server.boot()
-        app.add_status('Server online. Press Ctrl-C to exit.')
+        app.add_status('Server online. Press C-q to exit.')
         input_type = type(input_handler).__name__.replace('Handler', '')
         app.add_status(f'Listening for {input_type} keyboard events...')
         with input_handler.listen(callback=input_callback):
