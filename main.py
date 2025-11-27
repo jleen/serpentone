@@ -1,8 +1,6 @@
 import argparse
-import threading
 import time
 
-from concurrent.futures import Future
 import supriya
 
 from play import (
@@ -25,7 +23,7 @@ def run(input_handler: InputHandler, synth) -> None:
     def on_boot(*args) -> None:  # Run this during server.boot().
         server.add_synthdefs(polyphony.synthdef)  # Add the polyphony's synthdef.
         server.sync()  # Wait for the synthdef to load before moving on.
-        #app.call_from_thread(app.add_status, 'Server booted successfully')
+        app.add_status('Server booted successfully')
 
     def on_quitting(*args) -> None:
         """
@@ -48,7 +46,7 @@ def run(input_handler: InputHandler, synth) -> None:
         # Play the event via polyphony directly.
         polyphony.perform(event)
 
-    def spawn_server_thread() -> None:
+    def start_server_and_listener() -> None:
         server.register_lifecycle_callback('BOOTED', on_boot)
         server.register_lifecycle_callback('QUITTING', on_quitting)
         server.boot()
@@ -61,7 +59,7 @@ def run(input_handler: InputHandler, synth) -> None:
     server = supriya.Server()
     polyphony = PolyphonyManager(server=server, synthdef=synth, note_callback=note_callback)
 
-    app = SerpentoneApp(spawn_server_thread)
+    app = SerpentoneApp(start_server_and_listener)
     app.run()
     # Okay, at this point the Textual event pump has been shut down, so we’re back to synchronous execution
     # on the main thread. Supercollider and the input listener are still running.
