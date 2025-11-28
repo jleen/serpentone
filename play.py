@@ -20,6 +20,7 @@ See the :doc:`example documentation </examples/keyboard_input>` for a complete
 explanation.
 """
 
+from abc import ABC, abstractmethod
 import contextlib
 from dataclasses import dataclass, field
 import functools
@@ -71,6 +72,7 @@ class PolyphonyManager:
 
     # The server to act on.
     server: supriya.Context
+    theory: MusicTheory
     # A dictionary of MIDI note numbers to synths.
     notes: dict[int, supriya.Synth] = field(default_factory=dict)
     # A synthdef to use when making new synths.
@@ -101,7 +103,7 @@ class PolyphonyManager:
             if event.note_number in self.notes:
                 return
             # Convert MIDI 0-127 to frequency in Hertz.
-            frequency = supriya.conversions.midi_note_number_to_frequency(
+            frequency = self.theory.tuning.midi_note_number_to_frequency(
                 event.note_number
             )
             # Convert MIDI 0-127 to amplitude.
@@ -130,12 +132,13 @@ class PolyphonyManager:
 
 
 @dataclass
-class InputHandler:
+class InputHandler(ABC):
     """
     Base class for input handlers.
     """
 
     @contextlib.contextmanager
+    @abstractmethod
     def listen(
         self, callback: Callable[[NoteOn | NoteOff], None]
     ) -> Generator[None, None, None]:
@@ -143,7 +146,7 @@ class InputHandler:
         # 1) Start the handler's listener.
         # 2) Yield to the with block body.
         # 3) Stop the handler's listener.
-        raise NotImplementedError
+        pass
 
 
 @dataclass
@@ -256,9 +259,7 @@ class QwertyHandler(InputHandler):
             return  # Not a valid key, ignore it.
         # Calculate the note number from the pitch and octave.
         note_number = pitch + self.octave * 12
-        # QWERTY keyboards aren't pressure-sensitive, so let's create a random
-        # velocity to simulate expressivity.
-        velocity = random.randint(32, 128)
+        velocity = 64
         # Stash the note number with the key for releasing later.
         # This ensures that changing the octave doesn't prevent releasing.
         self.presses_to_note_numbers[key.char] = note_number
@@ -282,3 +283,20 @@ class QwertyHandler(InputHandler):
         note_number = self.presses_to_note_numbers.pop(key.char)
         # Perform a "note off" event.
         callback(NoteOff(note_number=note_number))
+
+
+@dataclass
+class Tuning(ABC):
+    @abstractmethod
+    def midi_note_number_to_frequency(self, note_number: float) -> float: pass
+
+
+@dataclass
+class EqualTemperament(Tuning):
+    def midi_note_number_to_frequency(self, note_number: float) -> float:
+        return supriya.conversions.midi_note_number_to_frequency(note_number)
+
+
+@dataclass
+class MusicTheory:
+    tuning: Tuning
