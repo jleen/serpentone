@@ -24,7 +24,6 @@ from abc import ABC, abstractmethod
 import contextlib
 from dataclasses import dataclass, field
 import functools
-import random
 from typing import Callable, Generator
 
 import pynput
@@ -33,6 +32,8 @@ import rtmidi.midiconstants
 import rtmidi.midiutil
 import supriya
 import supriya.conversions
+
+import synths
 
 
 def list_midi_ports():
@@ -43,7 +44,12 @@ def list_midi_ports():
 
 
 @dataclass
-class NoteOn:
+class Command(ABC):
+    pass
+
+
+@dataclass
+class NoteOn(Command):
     """
     A note on event.
     """
@@ -53,12 +59,17 @@ class NoteOn:
 
 
 @dataclass
-class NoteOff:
+class NoteOff(Command):
     """
     A note off event.
     """
 
     note_number: int
+
+
+@dataclass
+class SelectSynthDef(Command):
+    synthdef: supriya.SynthDef
 
 
 @dataclass
@@ -75,8 +86,6 @@ class PolyphonyManager:
     theory: MusicTheory
     # A dictionary of MIDI note numbers to synths.
     notes: dict[int, supriya.Synth] = field(default_factory=dict)
-    # A synthdef to use when making new synths.
-    synthdef: supriya.SynthDef = field(default=supriya.default)
     # Target node to add relative to.
     target_node: supriya.Node | None = None
     # Add action to use.
@@ -93,12 +102,14 @@ class PolyphonyManager:
             for synth in self.notes.values():
                 synth.free()
 
-    def perform(self, event: NoteOn | NoteOff) -> None:
+    def perform(self, event: Command) -> None:
         """
         Perform a :py:class:`NoteOn` or :py:class:`NoteOff` event.
         """
+        if isinstance(event, SelectSynthDef):
+            self.theory.synthdef = event.synthdef
         # If we're starting a note.
-        if isinstance(event, NoteOn):
+        elif isinstance(event, NoteOn):
             # Bail if we already started this note.
             if event.note_number in self.notes:
                 return
@@ -113,7 +124,7 @@ class PolyphonyManager:
                 add_action=self.add_action,
                 amplitude=amplitude,
                 frequency=frequency,
-                synthdef=self.synthdef,
+                synthdef=self.theory.synthdef,
                 target_node=self.target_node,
             )
             # Call the callback if provided.
@@ -140,7 +151,7 @@ class InputHandler(ABC):
     @contextlib.contextmanager
     @abstractmethod
     def listen(
-        self, callback: Callable[[NoteOn | NoteOff], None]
+        self, callback: Callable[[Command], None]
     ) -> Generator[None, None, None]:
         # Subclasses must implement this method.
         # 1) Start the handler's listener.
@@ -159,7 +170,7 @@ class MidiHandler(InputHandler):
 
     @contextlib.contextmanager
     def listen(
-        self, callback: Callable[[NoteOn | NoteOff], None]
+        self, callback: Callable[[Command], None]
     ) -> Generator[None, None, None]:
         """
         Context manager for listening to MIDI input events.
@@ -209,7 +220,7 @@ class QwertyHandler(InputHandler):
 
     @contextlib.contextmanager
     def listen(
-        self, callback: Callable[[NoteOn | NoteOff], None]
+        self, callback: Callable[[Command], None]
     ) -> Generator[None, None, None]:
         """
         Context manager for listening to QWERTY input events.
@@ -237,7 +248,7 @@ class QwertyHandler(InputHandler):
 
     def on_press(
         self,
-        callback: Callable[[NoteOn | NoteOff], None],
+        callback: Callable[[Command], None],
         key: pynput.keyboard.Key | pynput.keyboard.KeyCode | None,
     ) -> None:
         """
@@ -253,6 +264,13 @@ class QwertyHandler(InputHandler):
         if key.char == 'x':  # Increment our octave setting.
             self.octave = min(self.octave + 1, 10)
             return
+        if key.char == 'c':
+            callback(SelectSynthDef(synthdef=synths.default))
+        if key.char == 'v':
+            callback(SelectSynthDef(synthdef=synths.simple_sine))
+        if key.char == 'b':
+            callback(SelectSynthDef(synthdef=synths.mockingboard))
+
         if key in self.presses_to_note_numbers:
             return  # Already pressed.
         if (pitch := self.qwerty_key_to_pitch_number(key.char)) is None:
@@ -300,3 +318,4 @@ class EqualTemperament(Tuning):
 @dataclass
 class MusicTheory:
     tuning: Tuning
+    synthdef: supriya.SynthDef
