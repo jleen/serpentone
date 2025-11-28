@@ -111,18 +111,6 @@ class PolyphonyManager:
         if self.note_off_callback:
             self.note_off_callback(note_number)
 
-    def select_synthdef(self, synthdef: supriya.SynthDef) -> None:
-        """
-        Select a synthdef.
-        """
-        self.theory.synthdef = synthdef
-
-    def select_tuning(self, tuning: Tuning) -> None:
-        """
-        Select a tuning.
-        """
-        self.theory.tuning = tuning
-
 
 @dataclass
 class InputHandler(ABC):
@@ -239,15 +227,15 @@ class QwertyHandler(InputHandler):
             self.octave = min(self.octave + 1, 10)
             return
         if key.char == 'c':
-            polyphony_manager.select_synthdef(synths.default)
+            polyphony_manager.theory.synthdef = synths.default
         if key.char == 'v':
-            polyphony_manager.select_synthdef(synths.simple_sine)
+            polyphony_manager.theory.synthdef = synths.simple_sine
         if key.char == 'b':
-            polyphony_manager.select_synthdef(synths.mockingboard)
+            polyphony_manager.theory.synthdef = synths.mockingboard
         if key.char == 'n':
-            polyphony_manager.select_tuning(JustIntonation(key='A'))
+            polyphony_manager.theory.tuning = JustIntonation(key='A')
         if key.char == 'm':
-            polyphony_manager.select_tuning(EqualTemperament())
+            polyphony_manager.theory.tuning = EqualTemperament()
 
         if key in self.presses_to_note_numbers:
             return  # Already pressed.
