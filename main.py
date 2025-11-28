@@ -4,7 +4,6 @@ import time
 import supriya
 
 from play import (
-    Command,
     EqualTemperament,
     MusicTheory,
     list_midi_ports,
@@ -45,10 +44,6 @@ def run(input_handler: InputHandler, synth) -> None:
         elif isinstance(event, NoteOff):
             app.call_from_thread(app.remove_note, event.note_number)
 
-    def input_callback(event: Command) -> None:
-        # Play the event via polyphony directly.
-        polyphony.perform(event)
-
     def start_server_and_listener() -> None:
         server.register_lifecycle_callback('BOOTED', on_boot)
         server.register_lifecycle_callback('QUITTING', on_quitting)
@@ -59,10 +54,10 @@ def run(input_handler: InputHandler, synth) -> None:
         listener.__enter__()
 
     # First we wire up some objects. Nothing exciting happens yet.
-    listener = input_handler.listen(callback=input_callback)
     server = supriya.Server()
     theory = MusicTheory(tuning=EqualTemperament(), synthdef=synth)
     polyphony = PolyphonyManager(server=server, note_callback=note_callback, theory=theory)
+    listener = input_handler.listen(polyphony)
     app = SerpentoneApp(start_server_and_listener)
 
     # Now we run the Textual app, which starts the event pump.
