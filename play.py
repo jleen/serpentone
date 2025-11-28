@@ -73,6 +73,11 @@ class SelectSynthDef(Command):
 
 
 @dataclass
+class SelectTuning(Command):
+    tuning: Tuning
+
+
+@dataclass
 class PolyphonyManager:
     """
     A polyphony manager.
@@ -108,6 +113,8 @@ class PolyphonyManager:
         """
         if isinstance(event, SelectSynthDef):
             self.theory.synthdef = event.synthdef
+        if isinstance(event, SelectTuning):
+            self.theory.tuning = event.tuning
         # If we're starting a note.
         elif isinstance(event, NoteOn):
             # Bail if we already started this note.
@@ -270,6 +277,10 @@ class QwertyHandler(InputHandler):
             callback(SelectSynthDef(synthdef=synths.simple_sine))
         if key.char == 'b':
             callback(SelectSynthDef(synthdef=synths.mockingboard))
+        if key.char == 'n':
+            callback(SelectTuning(JustIntonation(key='A')))
+        if key.char == 'm':
+            callback(SelectTuning(EqualTemperament()))
 
         if key in self.presses_to_note_numbers:
             return  # Already pressed.
@@ -313,6 +324,20 @@ class Tuning(ABC):
 class EqualTemperament(Tuning):
     def midi_note_number_to_frequency(self, note_number: float) -> float:
         return supriya.conversions.midi_note_number_to_frequency(note_number)
+
+
+@dataclass
+class JustIntonation(Tuning):
+    key: str
+    def midi_note_number_to_frequency(self, note_number: float) -> float:
+        if note_number == 69:
+            return 440
+        elif note_number == 73:
+            return 550
+        elif note_number == 76:
+            return 660
+        else:
+            return 0
 
 
 @dataclass
