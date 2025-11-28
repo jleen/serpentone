@@ -44,30 +44,11 @@ def list_midi_ports():
 
 
 @dataclass
-class NoteOn:
-    """
-    A note on event.
-    """
-
-    note_number: int
-    velocity: int
-
-
-@dataclass
-class NoteOff:
-    """
-    A note off event.
-    """
-
-    note_number: int
-
-
-@dataclass
 class PolyphonyManager:
     """
     A polyphony manager.
 
-    Translates :py:class:`NoteOn` or :py:class:`NoteOff` events into actions
+    Translates note on/off events into actions
     against a :py:class:`~supriya.contexts.core.Context`.
     """
 
@@ -80,8 +61,10 @@ class PolyphonyManager:
     target_node: supriya.Node | None = None
     # Add action to use.
     add_action: supriya.AddAction = supriya.AddAction.ADD_TO_HEAD
-    # Optional callback for note events.
-    note_callback: Callable[[NoteOn | NoteOff, float], None] | None = None
+    # Optional callback for note on events (note_number, frequency, velocity).
+    note_on_callback: Callable[[int, float, int], None] | None = None
+    # Optional callback for note off events (note_number).
+    note_off_callback: Callable[[int], None] | None = None
 
     def free_all(self) -> None:
         """
@@ -112,8 +95,8 @@ class PolyphonyManager:
             target_node=self.target_node,
         )
         # Call the callback if provided.
-        if self.note_callback:
-            self.note_callback(NoteOn(note_number=note_number, velocity=velocity), frequency)
+        if self.note_on_callback:
+            self.note_on_callback(note_number, frequency, velocity)
 
     def note_off(self, note_number: int) -> None:
         """
@@ -125,8 +108,8 @@ class PolyphonyManager:
         # Pop the synth out of the dictionary and free it.
         self.notes.pop(note_number).free()
         # Call the callback if provided.
-        if self.note_callback:
-            self.note_callback(NoteOff(note_number=note_number), 0.0)
+        if self.note_off_callback:
+            self.note_off_callback(note_number)
 
     def select_synthdef(self, synthdef: supriya.SynthDef) -> None:
         """
@@ -175,12 +158,11 @@ class MidiHandler(InputHandler):
         Context manager for listening to MIDI input events.
         """
         self.midi_input = rtmidi.MidiIn()  # type: ignore
-        # Set the MIDI event callback to this class's handle method.
         self.midi_input.set_callback(functools.partial(self.handle, polyphony_manager))
-        self.midi_input.open_port(self.port)  # Open the port for listening.
-        print('Listening for MIDI keyboard events ...')  # Let the user know.
-        yield  # Yield to the with block body.
-        self.midi_input.close_port()  # Close the port.
+        self.midi_input.open_port(self.port)
+        print('Listening for MIDI keyboard events ...')
+        yield
+        self.midi_input.close_port()
 
     def handle(
         self,
@@ -194,17 +176,11 @@ class MidiHandler(InputHandler):
         # The raw MIDI event is a 2-tuple of MIDI data and time delta.
         # Unpack it, keep the data and discard the time delta.
         data, _ = event
-        if data[0] == rtmidi.midiconstants.NOTE_ON + 1:  # If we received a note-on.
-            # Grab the note number and velocity.
+        if data[0] == rtmidi.midiconstants.NOTE_ON + 1:
             _, note_number, velocity = data
-            # Call note_on directly.
             polyphony_manager.note_on(note_number=note_number, velocity=velocity)
-        elif (
-            data[0] == rtmidi.midiconstants.NOTE_OFF + 1
-        ):  # If we received a note-off.
-            # Grab the note number.
+        elif data[0] == rtmidi.midiconstants.NOTE_OFF + 1:
             _, note_number, _ = data
-            # Call note_off directly.
             polyphony_manager.note_off(note_number=note_number)
 
 
@@ -224,15 +200,14 @@ class QwertyHandler(InputHandler):
         """
         Context manager for listening to QWERTY input events.
         """
-        # Set up the QWERTY keyboard listener.
         self.listener = pynput.keyboard.Listener(
             on_press=functools.partial(self.on_press, polyphony_manager),
             on_release=functools.partial(self.on_release, polyphony_manager),
         )
-        self.listener.start()  # Start the listener.
-        print('Listening for QWERTY keyboard events ...')  # Let the user know.
-        yield  # Yield to the with block body.
-        self.listener.stop()  # Stop the listener.
+        self.listener.start()
+        print('Listening for QWERTY keyboard events ...')
+        yield
+        self.listener.stop()
 
     @staticmethod
     def qwerty_key_to_pitch_number(key: str) -> int | None:
@@ -254,21 +229,21 @@ class QwertyHandler(InputHandler):
         Handle a QWERTY key press.
         """
         if not isinstance(key, pynput.keyboard.KeyCode):
-            return  # Bail if we didn't get a keycode object.
+            return
         if key.char is None:
             return
-        if key.char == 'z':  # Decrement our octave setting.
+        if key.char == 'z':
             self.octave = max(self.octave - 1, 0)
             return
-        if key.char == 'x':  # Increment our octave setting.
+        if key.char == 'x':
             self.octave = min(self.octave + 1, 10)
             return
         if key.char == 'c':
-            polyphony_manager.select_synthdef(synthdef=synths.default)
+            polyphony_manager.select_synthdef(synths.default)
         if key.char == 'v':
-            polyphony_manager.select_synthdef(synthdef=synths.simple_sine)
+            polyphony_manager.select_synthdef(synths.simple_sine)
         if key.char == 'b':
-            polyphony_manager.select_synthdef(synthdef=synths.mockingboard)
+            polyphony_manager.select_synthdef(synths.mockingboard)
         if key.char == 'n':
             polyphony_manager.select_tuning(JustIntonation(key='A'))
         if key.char == 'm':
@@ -284,7 +259,6 @@ class QwertyHandler(InputHandler):
         # Stash the note number with the key for releasing later.
         # This ensures that changing the octave doesn't prevent releasing.
         self.presses_to_note_numbers[key.char] = note_number
-        # Call note_on directly.
         polyphony_manager.note_on(note_number=note_number, velocity=velocity)
 
     def on_release(
@@ -302,7 +276,6 @@ class QwertyHandler(InputHandler):
             return
         # Grab the note number out of the stash.
         note_number = self.presses_to_note_numbers.pop(key.char)
-        # Call note_off directly.
         polyphony_manager.note_off(note_number=note_number)
 
 

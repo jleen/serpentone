@@ -1,4 +1,5 @@
 import argparse
+import functools
 import time
 
 import supriya
@@ -9,8 +10,6 @@ from play import (
     list_midi_ports,
     InputHandler,
     MidiHandler,
-    NoteOff,
-    NoteOn,
     PolyphonyManager,
     QwertyHandler,
 )
@@ -37,13 +36,6 @@ def run(input_handler: InputHandler, synth) -> None:
         listener.__exit__(None, None, None)
         print('Input listener stopped')
 
-    def note_callback(event: NoteOn | NoteOff, frequency: float) -> None:
-        # Update the TUI with note information.
-        if isinstance(event, NoteOn):
-            app.call_from_thread(app.add_note, event.note_number, frequency, event.velocity)
-        elif isinstance(event, NoteOff):
-            app.call_from_thread(app.remove_note, event.note_number)
-
     def start_server_and_listener() -> None:
         server.register_lifecycle_callback('BOOTED', on_boot)
         server.register_lifecycle_callback('QUITTING', on_quitting)
@@ -56,9 +48,14 @@ def run(input_handler: InputHandler, synth) -> None:
     # First we wire up some objects. Nothing exciting happens yet.
     server = supriya.Server()
     theory = MusicTheory(tuning=EqualTemperament(), synthdef=synth)
-    polyphony = PolyphonyManager(server=server, note_callback=note_callback, theory=theory)
-    listener = input_handler.listen(polyphony)
     app = SerpentoneApp(start_server_and_listener)
+    polyphony = PolyphonyManager(
+        server=server,
+        theory=theory,
+        note_on_callback=functools.partial(app.call_from_thread, app.add_note),
+        note_off_callback=functools.partial(app.call_from_thread, app.remove_note)
+    )
+    listener = input_handler.listen(polyphony)
 
     # Now we run the Textual app, which starts the event pump.
     # The app has an on_mount callback that will start Supercollider and the input listener.
