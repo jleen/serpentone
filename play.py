@@ -82,9 +82,7 @@ class PolyphonyManager:
         # Bail if we already started this note.
         if note_number in self.notes:
             return
-        # Convert MIDI 0-127 to frequency in Hertz.
         frequency = self.theory.tuning.midi_note_number_to_frequency(note_number)
-        # Convert MIDI 0-127 to amplitude.
         amplitude = supriya.conversions.midi_velocity_to_amplitude(velocity)
         # Create a synth and store a reference by MIDI note number in the dictionary.
         self.notes[note_number] = self.server.add_synth(
@@ -94,7 +92,6 @@ class PolyphonyManager:
             synthdef=self.theory.synthdef,
             target_node=self.target_node,
         )
-        # Call the callback if provided.
         if self.note_on_callback:
             self.note_on_callback(note_number, frequency, velocity)
 
@@ -163,12 +160,13 @@ class MidiHandler(InputHandler):
         """
         # The raw MIDI event is a 2-tuple of MIDI data and time delta.
         # Unpack it, keep the data and discard the time delta.
-        data, _ = event
-        if data[0] == rtmidi.midiconstants.NOTE_ON + 1:
-            _, note_number, velocity = data
-            polyphony_manager.note_on(note_number=note_number, velocity=velocity)
-        elif data[0] == rtmidi.midiconstants.NOTE_OFF + 1:
-            _, note_number, _ = data
+        [func, note_number, velocity], _ = event
+        if rtmidi.midiconstants.NOTE_ON <= func < rtmidi.midiconstants.NOTE_ON + 16:
+            if velocity == 0:
+                polyphony_manager.note_off(note_number=note_number)
+            else:
+                polyphony_manager.note_on(note_number=note_number, velocity=velocity)
+        elif rtmidi.midiconstants.NOTE_OFF <= func < rtmidi.midiconstants.NOTE_OFF + 16:
             polyphony_manager.note_off(note_number=note_number)
 
 
