@@ -1,3 +1,4 @@
+# type: ignore
 from supriya import Envelope, synthdef
 from supriya.ugens import EnvGen, LFTri, Out, SinOsc
 
