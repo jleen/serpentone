@@ -1,4 +1,3 @@
-# type: ignore
 from supriya import Envelope, synthdef
 from supriya import default  # noqa: F401
 from supriya.ugens import EnvGen, LFTri, Out, SinOsc
