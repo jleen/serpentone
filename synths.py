@@ -1,6 +1,8 @@
-from supriya import Envelope, synthdef
-from supriya import default  # noqa: F401
+from supriya import Envelope, default, synthdef
 from supriya.ugens import EnvGen, LFTri, Out, SinOsc
+
+
+default = default
 
 
 @synthdef()
