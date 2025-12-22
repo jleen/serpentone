@@ -1,0 +1,24 @@
+{
+	"name": "Python 3",
+	
+	"image": "mcr.microsoft.com/devcontainers/python:2-3.14-trixie",
+	"features": {
+        "ghcr.io/jsburckhardt/devcontainer-features/uv:1": {}
+    },
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"astral-sh.ty",
+				"charliermarsh.ruff"
+			]
+		}
+	},
+
+	"containerEnv": {
+		"UV_PROJECT_ENVIRONMENT": "/home/vscode/venv"
+	},
+
+	"postCreateCommand": "sudo apt-get update && sudo apt-get install -y libasound2-dev && uv sync"
+	// "forwardPorts": [],
+	// "remoteUser": "root"
+}
