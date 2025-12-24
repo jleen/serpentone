@@ -114,9 +114,9 @@ class SerpentoneApp(App):
     }
     """
 
+    current_synth = reactive[str]('')
     def __init__(self, init):
         super().__init__()
-        self.synth_panel = None
         self.status_panel = None
         self.note_panel = None
         self.init = init
@@ -124,8 +124,7 @@ class SerpentoneApp(App):
     def compose(self) -> ComposeResult:
         """Create child widgets."""
         with Container(id="synth-container"):
-            self.synth_panel = SynthPanel()
-            yield self.synth_panel
+            yield SynthPanel().data_bind(synth_name=type(self).current_synth)
         with Container(id="status-container"):
             self.status_panel = StatusPanel()
             yield self.status_panel
@@ -155,5 +154,4 @@ class SerpentoneApp(App):
 
     def update_synth(self, synth_name: str) -> None:
         """Update the currently selected synth."""
-        if self.synth_panel:
-            self.synth_panel.update_synth(synth_name)
+        self.current_synth = synth_name
