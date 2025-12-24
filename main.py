@@ -1,5 +1,4 @@
 import argparse
-import functools
 import time
 
 import supriya
@@ -14,7 +13,7 @@ from play import (
     QwertyHandler,
 )
 import synths
-from tui import SerpentoneApp
+from tui import SerpentoneApp, StatusPanel, NotePanel, SynthPanel
 
 
 def run(input_handler: InputHandler, synth) -> None:
@@ -24,7 +23,7 @@ def run(input_handler: InputHandler, synth) -> None:
     def on_boot(*args) -> None:  # Run this during server.boot().
         server.add_synthdefs(synths.simple_sine, synths.mockingboard, synths.default)
         server.sync()  # Wait for the synthdef to load before moving on.
-        app.add_status('Server booted successfully')
+        app.query_one(StatusPanel).post_message(StatusPanel.AddMessage('Server booted successfully'))
 
     def on_quitting(*args) -> None:
         """
@@ -40,21 +39,31 @@ def run(input_handler: InputHandler, synth) -> None:
         server.register_lifecycle_callback('BOOTED', on_boot)
         server.register_lifecycle_callback('QUITTING', on_quitting)
         server.boot()
-        app.add_status('Server online. Press C-q to exit.')
+        status_panel = app.query_one(StatusPanel)
+        status_panel.post_message(StatusPanel.AddMessage('Server online. Press C-q to exit.'))
         input_type = type(input_handler).__name__.replace('Handler', '')
-        app.add_status(f'Listening for {input_type} keyboard events...')
+        status_panel.post_message(StatusPanel.AddMessage(f'Listening for {input_type} keyboard events...'))
         listener.__enter__()
 
     # First we wire up some objects. Nothing exciting happens yet.
     server = supriya.Server()
     theory = MusicTheory(tuning=EqualTemperament(), synthdef=synth)
     app = SerpentoneApp(start_server_and_listener)
+
+    # Wire callbacks directly to widget messages (post_message is thread-safe)
+    # query_one is called lazily inside the lambda, after widgets are mounted
     polyphony = PolyphonyManager(
         server=server,
         theory=theory,
-        note_on_callback=functools.partial(app.call_from_thread, app.add_note),
-        note_off_callback=functools.partial(app.call_from_thread, app.remove_note),
-        synth_change_callback=functools.partial(app.call_from_thread, app.update_synth)
+        note_on_callback=lambda note, freq, vel: app.query_one(NotePanel).post_message(
+            NotePanel.AddNote(note, freq, vel)
+        ),
+        note_off_callback=lambda note: app.query_one(NotePanel).post_message(
+            NotePanel.RemoveNote(note)
+        ),
+        synth_change_callback=lambda name: app.query_one(SynthPanel).post_message(
+            SynthPanel.UpdateSynth(name)
+        )
     )
     listener = input_handler.listen(polyphony)
 
