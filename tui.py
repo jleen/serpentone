@@ -1,16 +1,17 @@
 """
 TUI components.
 """
+from textual.widget import Widget
 from textual.app import App, ComposeResult
 from textual.containers import Container
 from textual.reactive import reactive
 from textual.widgets import Static
 
 
-class StatusPanel(Static):
+class StatusPanel(Widget):
     """Panel for displaying status messages."""
 
-    messages = reactive[list[str]](list)
+    messages = reactive[list[str]](list, recompose=True)
 
     def add_message(self, message: str) -> None:
         """Add a status message to the panel."""
@@ -20,30 +21,27 @@ class StatusPanel(Static):
             self.messages[:] = self.messages[-20:]
         self.mutate_reactive(StatusPanel.messages)
 
-    def watch_messages(self, messages: list[str]) -> None:
-        """Called when messages changes."""
-        self.update("\n".join(messages))
+    def compose(self) -> ComposeResult:
+        yield Static('\n'.join(self.messages))
 
 
-class SynthPanel(Static):
+class SynthPanel(Widget):
     """Panel for displaying the currently selected synth."""
 
-    synth_name = reactive("")
+    synth_name = reactive("", recompose=True)
 
     def update_synth(self, synth_name: str) -> None:
         """Update the displayed synth name."""
         self.synth_name = synth_name
 
-    def watch_synth_name(self, synth_name: str) -> None:
-        """Called when synth_name changes."""
-        display_text = f"Current Synth: {synth_name}"
-        self.update(display_text)
+    def compose(self) -> ComposeResult:
+        yield Static(f'Current Synth: {self.synth_name}')
 
 
-class NotePanel(Static):
+class NotePanel(Widget):
     """Panel for displaying currently playing notes."""
 
-    active_notes = reactive[dict](dict)
+    active_notes = reactive[dict](dict, recompose=True)
 
     def add_note(self, note_number: int, frequency: float, velocity: int) -> None:
         """Add a note to the display."""
@@ -59,18 +57,19 @@ class NotePanel(Static):
             del self.active_notes[note_number]
         self.mutate_reactive(NotePanel.active_notes)
 
-    def watch_active_notes(self, active_notes: dict) -> None:
+    def compose(self) -> ComposeResult:
         """Called when active_notes changes."""
-        if not active_notes:
-            self.update("No notes playing")
+        if not self.active_notes:
+            content = 'No notes playing'
         else:
-            lines = ["Currently playing notes:"]
-            for note_num, info in sorted(active_notes.items()):
+            lines = ['Currently playing notes:']
+            for note_num, info in sorted(self.active_notes.items()):
                 lines.append(
                     f"  Note {note_num}: {info['frequency']:.2f} Hz "
                     f"(velocity: {info['velocity']})"
                 )
-            self.update("\n".join(lines))
+            content = '\n'.join(lines)
+        yield Static(content)
 
 
 class SerpentoneApp(App):
