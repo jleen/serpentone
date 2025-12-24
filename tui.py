@@ -22,6 +22,18 @@ class StatusPanel(Static):
         self.update("\n".join(self.messages))
 
 
+class SynthPanel(Static):
+    """Panel for displaying the currently selected synth."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def update_synth(self, synth_name: str) -> None:
+        """Update the displayed synth name."""
+        display_text = f"Current Synth: {synth_name}"
+        self.update(display_text)
+
+
 class NotePanel(Static):
     """Panel for displaying currently playing notes."""
 
@@ -65,16 +77,27 @@ class SerpentoneApp(App):
         layout: vertical;
     }
 
+    #synth-container {
+        height: 5;
+        border: solid yellow;
+        padding: 1;
+    }
+
     #status-container {
-        height: 60%;
+        height: 1fr;
         border: solid green;
         padding: 1;
     }
 
     #note-container {
-        height: 40%;
+        height: 1fr;
         border: solid blue;
         padding: 1;
+    }
+
+    SynthPanel {
+        width: 100%;
+        height: 100%;
     }
 
     StatusPanel {
@@ -90,12 +113,16 @@ class SerpentoneApp(App):
 
     def __init__(self, init):
         super().__init__()
+        self.synth_panel = None
         self.status_panel = None
         self.note_panel = None
         self.init = init
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
+        with Container(id="synth-container"):
+            self.synth_panel = SynthPanel()
+            yield self.synth_panel
         with Container(id="status-container"):
             self.status_panel = StatusPanel()
             yield self.status_panel
@@ -122,3 +149,8 @@ class SerpentoneApp(App):
         """Remove a playing note."""
         if self.note_panel:
             self.note_panel.remove_note(note_number)
+
+    def update_synth(self, synth_name: str) -> None:
+        """Update the currently selected synth."""
+        if self.synth_panel:
+            self.synth_panel.update_synth(synth_name)

@@ -65,6 +65,8 @@ class PolyphonyManager:
     note_on_callback: Callable[[int, float, int], None] | None = None
     # Optional callback for note off events (note_number).
     note_off_callback: Callable[[int], None] | None = None
+    # Optional callback for synth change events (synth_name).
+    synth_change_callback: Callable[[str], None] | None = None
 
     def free_all(self) -> None:
         """
@@ -226,10 +228,16 @@ class QwertyHandler(InputHandler):
             return
         if key.char == 'c':
             polyphony_manager.theory.synthdef = synths.default
+            if polyphony_manager.synth_change_callback:
+                polyphony_manager.synth_change_callback('default')
         if key.char == 'v':
             polyphony_manager.theory.synthdef = synths.simple_sine
+            if polyphony_manager.synth_change_callback:
+                polyphony_manager.synth_change_callback('simple_sine')
         if key.char == 'b':
             polyphony_manager.theory.synthdef = synths.mockingboard
+            if polyphony_manager.synth_change_callback:
+                polyphony_manager.synth_change_callback('mockingboard')
         if key.char == 'n':
             polyphony_manager.theory.tuning = JustIntonation(key='A')
         if key.char == 'm':

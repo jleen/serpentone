@@ -53,7 +53,8 @@ def run(input_handler: InputHandler, synth) -> None:
         server=server,
         theory=theory,
         note_on_callback=functools.partial(app.call_from_thread, app.add_note),
-        note_off_callback=functools.partial(app.call_from_thread, app.remove_note)
+        note_off_callback=functools.partial(app.call_from_thread, app.remove_note),
+        synth_change_callback=functools.partial(app.call_from_thread, app.update_synth)
     )
     listener = input_handler.listen(polyphony)
 
