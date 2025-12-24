@@ -3,33 +3,39 @@ TUI components.
 """
 from textual.app import App, ComposeResult
 from textual.containers import Container
+from textual.reactive import reactive
 from textual.widgets import Static
 
 
 class StatusPanel(Static):
     """Panel for displaying status messages."""
 
-    def __init__(self, **kwargs):
-        super().__init__("", **kwargs)
-        self.messages = []
+    messages = reactive[list[str]](list)
 
     def add_message(self, message: str) -> None:
         """Add a status message to the panel."""
         self.messages.append(message)
         # Keep only the last 20 messages.
         if len(self.messages) > 20:
-            self.messages = self.messages[-20:]
-        self.update("\n".join(self.messages))
+            self.messages[:] = self.messages[-20:]
+        self.mutate_reactive(StatusPanel.messages)
+
+    def watch_messages(self, messages: list[str]) -> None:
+        """Called when messages changes."""
+        self.update("\n".join(messages))
 
 
 class SynthPanel(Static):
     """Panel for displaying the currently selected synth."""
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    synth_name = reactive("")
 
     def update_synth(self, synth_name: str) -> None:
         """Update the displayed synth name."""
+        self.synth_name = synth_name
+
+    def watch_synth_name(self, synth_name: str) -> None:
+        """Called when synth_name changes."""
         display_text = f"Current Synth: {synth_name}"
         self.update(display_text)
 
@@ -37,9 +43,7 @@ class SynthPanel(Static):
 class NotePanel(Static):
     """Panel for displaying currently playing notes."""
 
-    def __init__(self, **kwargs):
-        super().__init__("No notes playing", **kwargs)
-        self.active_notes = {}
+    active_notes = reactive[dict](dict)
 
     def add_note(self, note_number: int, frequency: float, velocity: int) -> None:
         """Add a note to the display."""
@@ -47,21 +51,21 @@ class NotePanel(Static):
             'frequency': frequency,
             'velocity': velocity
         }
-        self._update_display()
+        self.mutate_reactive(NotePanel.active_notes)
 
     def remove_note(self, note_number: int) -> None:
         """Remove a note from the display."""
         if note_number in self.active_notes:
             del self.active_notes[note_number]
-        self._update_display()
+        self.mutate_reactive(NotePanel.active_notes)
 
-    def _update_display(self) -> None:
-        """Update the panel display."""
-        if not self.active_notes:
+    def watch_active_notes(self, active_notes: dict) -> None:
+        """Called when active_notes changes."""
+        if not active_notes:
             self.update("No notes playing")
         else:
             lines = ["Currently playing notes:"]
-            for note_num, info in sorted(self.active_notes.items()):
+            for note_num, info in sorted(active_notes.items()):
                 lines.append(
                     f"  Note {note_num}: {info['frequency']:.2f} Hz "
                     f"(velocity: {info['velocity']})"
