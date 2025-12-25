@@ -13,14 +13,6 @@ class StatusPanel(Widget):
 
     messages = reactive[list[str]](list, recompose=True)
 
-    def add_message(self, message: str) -> None:
-        """Add a status message to the panel."""
-        self.messages.append(message)
-        # Keep only the last 20 messages.
-        if len(self.messages) > 20:
-            self.messages[:] = self.messages[-20:]
-        self.mutate_reactive(StatusPanel.messages)
-
     def compose(self) -> ComposeResult:
         yield Static('\n'.join(self.messages))
 
@@ -30,10 +22,6 @@ class SynthPanel(Widget):
 
     synth_name = reactive("", recompose=True)
 
-    def update_synth(self, synth_name: str) -> None:
-        """Update the displayed synth name."""
-        self.synth_name = synth_name
-
     def compose(self) -> ComposeResult:
         yield Static(f'Current Synth: {self.synth_name}')
 
@@ -42,20 +30,6 @@ class NotePanel(Widget):
     """Panel for displaying currently playing notes."""
 
     active_notes = reactive[dict](dict, recompose=True)
-
-    def add_note(self, note_number: int, frequency: float, velocity: int) -> None:
-        """Add a note to the display."""
-        self.active_notes[note_number] = {
-            'frequency': frequency,
-            'velocity': velocity
-        }
-        self.mutate_reactive(NotePanel.active_notes)
-
-    def remove_note(self, note_number: int) -> None:
-        """Remove a note from the display."""
-        if note_number in self.active_notes:
-            del self.active_notes[note_number]
-        self.mutate_reactive(NotePanel.active_notes)
 
     def compose(self) -> ComposeResult:
         """Called when active_notes changes."""
@@ -115,10 +89,11 @@ class SerpentoneApp(App):
     """
 
     current_synth = reactive[str]('')
+    status_messages = reactive[list[str]](list)
+    notes = reactive[dict](dict)
+
     def __init__(self, init):
         super().__init__()
-        self.status_panel = None
-        self.note_panel = None
         self.init = init
 
     def compose(self) -> ComposeResult:
@@ -126,11 +101,9 @@ class SerpentoneApp(App):
         with Container(id="synth-container"):
             yield SynthPanel().data_bind(synth_name=type(self).current_synth)
         with Container(id="status-container"):
-            self.status_panel = StatusPanel()
-            yield self.status_panel
+            yield StatusPanel().data_bind(messages=type(self).status_messages)
         with Container(id="note-container"):
-            self.note_panel = NotePanel()
-            yield self.note_panel
+            yield NotePanel().data_bind(active_notes=type(self).notes)
 
     def on_mount(self) -> None:
         """Handle app mount."""
@@ -139,18 +112,25 @@ class SerpentoneApp(App):
 
     def add_status(self, message: str) -> None:
         """Add a status message."""
-        if self.status_panel:
-            self.status_panel.add_message(message)
+        self.status_messages.append(message)
+        # Keep only the last 20 messages.
+        if len(self.status_messages) > 20:
+            self.status_messages[:] = self.status_messages[-20:]
+        self.mutate_reactive(SerpentoneApp.status_messages)
 
     def add_note(self, note_number: int, frequency: float, velocity: int) -> None:
         """Add a playing note."""
-        if self.note_panel:
-            self.note_panel.add_note(note_number, frequency, velocity)
+        self.notes[note_number] = {
+            'frequency': frequency,
+            'velocity': velocity
+        }
+        self.mutate_reactive(SerpentoneApp.notes)
 
     def remove_note(self, note_number: int) -> None:
         """Remove a playing note."""
-        if self.note_panel:
-            self.note_panel.remove_note(note_number)
+        if note_number in self.notes:
+            del self.notes[note_number]
+        self.mutate_reactive(SerpentoneApp.notes)
 
     def update_synth(self, synth_name: str) -> None:
         """Update the currently selected synth."""
