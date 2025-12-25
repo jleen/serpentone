@@ -49,12 +49,18 @@ def run(input_handler: InputHandler, synth) -> None:
     server = supriya.Server()
     theory = MusicTheory(tuning=EqualTemperament(), synthdef=synth)
     app = SerpentoneApp(start_server_and_listener)
+    app.update_tuning('EqualTemperament')
+    # Set initial octave if using QwertyHandler
+    if isinstance(input_handler, QwertyHandler):
+        app.update_octave(input_handler.octave)
     polyphony = PolyphonyManager(
         server=server,
         theory=theory,
         note_on_callback=functools.partial(app.call_from_thread, app.add_note),
         note_off_callback=functools.partial(app.call_from_thread, app.remove_note),
-        synth_change_callback=functools.partial(app.call_from_thread, app.update_synth)
+        synth_change_callback=functools.partial(app.call_from_thread, app.update_synth),
+        tuning_change_callback=functools.partial(app.call_from_thread, app.update_tuning),
+        octave_change_callback=functools.partial(app.call_from_thread, app.update_octave)
     )
     listener = input_handler.listen(polyphony)
 

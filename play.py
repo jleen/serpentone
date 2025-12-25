@@ -67,6 +67,10 @@ class PolyphonyManager:
     note_off_callback: Callable[[int], None] | None = None
     # Optional callback for synth change events (synth_name).
     synth_change_callback: Callable[[str], None] | None = None
+    # Optional callback for tuning change events (tuning_name).
+    tuning_change_callback: Callable[[str], None] | None = None
+    # Optional callback for octave change events (octave).
+    octave_change_callback: Callable[[int], None] | None = None
 
     def free_all(self) -> None:
         """
@@ -222,9 +226,13 @@ class QwertyHandler(InputHandler):
             return
         if key.char == 'z':
             self.octave = max(self.octave - 1, 0)
+            if polyphony_manager.octave_change_callback:
+                polyphony_manager.octave_change_callback(self.octave)
             return
         if key.char == 'x':
             self.octave = min(self.octave + 1, 10)
+            if polyphony_manager.octave_change_callback:
+                polyphony_manager.octave_change_callback(self.octave)
             return
         if key.char == 'c':
             polyphony_manager.theory.synthdef = synths.default
@@ -240,8 +248,12 @@ class QwertyHandler(InputHandler):
                 polyphony_manager.synth_change_callback('mockingboard')
         if key.char == 'n':
             polyphony_manager.theory.tuning = JustIntonation(key='A')
+            if polyphony_manager.tuning_change_callback:
+                polyphony_manager.tuning_change_callback('JustIntonation')
         if key.char == 'm':
             polyphony_manager.theory.tuning = EqualTemperament()
+            if polyphony_manager.tuning_change_callback:
+                polyphony_manager.tuning_change_callback('EqualTemperament')
 
         if key in self.presses_to_note_numbers:
             return  # Already pressed.

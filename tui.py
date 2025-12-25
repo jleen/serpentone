@@ -26,6 +26,24 @@ class SynthPanel(Widget):
         yield Static(f'Current Synth: {self.synth_name}')
 
 
+class TuningPanel(Widget):
+    """Panel for displaying the currently selected tuning."""
+
+    tuning_name = reactive("", recompose=True)
+
+    def compose(self) -> ComposeResult:
+        yield Static(f'Current Tuning: {self.tuning_name}')
+
+
+class OctavePanel(Widget):
+    """Panel for displaying the current octave."""
+
+    octave = reactive(0, recompose=True)
+
+    def compose(self) -> ComposeResult:
+        yield Static(f'Octave: {self.octave}')
+
+
 class NotePanel(Widget):
     """Panel for displaying currently playing notes."""
 
@@ -54,8 +72,25 @@ class SerpentoneApp(App):
         layout: vertical;
     }
 
-    #synth-container {
+    #synth-tuning-row {
+        layout: horizontal;
         height: 5;
+    }
+
+    #synth-container {
+        width: 1fr;
+        border: solid yellow;
+        padding: 1;
+    }
+
+    #tuning-container {
+        width: 1fr;
+        border: solid yellow;
+        padding: 1;
+    }
+
+    #octave-container {
+        width: 1fr;
         border: solid yellow;
         padding: 1;
     }
@@ -77,6 +112,16 @@ class SerpentoneApp(App):
         height: 100%;
     }
 
+    TuningPanel {
+        width: 100%;
+        height: 100%;
+    }
+
+    OctavePanel {
+        width: 100%;
+        height: 100%;
+    }
+
     StatusPanel {
         width: 100%;
         height: 100%;
@@ -89,6 +134,8 @@ class SerpentoneApp(App):
     """
 
     current_synth = reactive[str]('')
+    current_tuning = reactive[str]('')
+    current_octave = reactive[int](0)
     status_messages = reactive[list[str]](list)
     notes = reactive[dict](dict)
 
@@ -98,8 +145,13 @@ class SerpentoneApp(App):
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
-        with Container(id="synth-container"):
-            yield SynthPanel().data_bind(synth_name=type(self).current_synth)
+        with Container(id="synth-tuning-row"):
+            with Container(id="synth-container"):
+                yield SynthPanel().data_bind(synth_name=type(self).current_synth)
+            with Container(id="tuning-container"):
+                yield TuningPanel().data_bind(tuning_name=type(self).current_tuning)
+            with Container(id="octave-container"):
+                yield OctavePanel().data_bind(octave=type(self).current_octave)
         with Container(id="status-container"):
             yield StatusPanel().data_bind(messages=type(self).status_messages)
         with Container(id="note-container"):
@@ -135,3 +187,11 @@ class SerpentoneApp(App):
     def update_synth(self, synth_name: str) -> None:
         """Update the currently selected synth."""
         self.current_synth = synth_name
+
+    def update_tuning(self, tuning_name: str) -> None:
+        """Update the currently selected tuning."""
+        self.current_tuning = tuning_name
+
+    def update_octave(self, octave: int) -> None:
+        """Update the current octave."""
+        self.current_octave = octave
