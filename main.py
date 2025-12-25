@@ -1,5 +1,4 @@
 import argparse
-import functools
 import time
 
 import supriya
@@ -14,7 +13,7 @@ from play import (
     QwertyHandler,
 )
 import synths
-from tui import SerpentoneApp
+from tui import SerpentoneApp, StateManager
 
 
 def run(input_handler: InputHandler, synth) -> None:
@@ -53,14 +52,11 @@ def run(input_handler: InputHandler, synth) -> None:
     # Set initial octave if using QwertyHandler
     if isinstance(input_handler, QwertyHandler):
         app.update_octave(input_handler.octave)
+    state_manager = StateManager(app)
     polyphony = PolyphonyManager(
         server=server,
         theory=theory,
-        note_on_callback=functools.partial(app.call_from_thread, app.add_note),
-        note_off_callback=functools.partial(app.call_from_thread, app.remove_note),
-        synth_change_callback=functools.partial(app.call_from_thread, app.update_synth),
-        tuning_change_callback=functools.partial(app.call_from_thread, app.update_tuning),
-        octave_change_callback=functools.partial(app.call_from_thread, app.update_octave)
+        state_manager=state_manager,
     )
     listener = input_handler.listen(polyphony)
 

@@ -8,6 +8,33 @@ from textual.reactive import reactive
 from textual.widgets import Static
 
 
+class StateManager:
+    """Manages state updates for the Serpentone app, handling thread-safety."""
+
+    def __init__(self, app: 'SerpentoneApp'):
+        self.app = app
+
+    def add_note(self, note_number: int, frequency: float, velocity: int) -> None:
+        """Add a playing note (thread-safe)."""
+        self.app.call_from_thread(self.app.add_note, note_number, frequency, velocity)
+
+    def remove_note(self, note_number: int) -> None:
+        """Remove a playing note (thread-safe)."""
+        self.app.call_from_thread(self.app.remove_note, note_number)
+
+    def update_synth(self, synth_name: str) -> None:
+        """Update the currently selected synth (thread-safe)."""
+        self.app.call_from_thread(self.app.update_synth, synth_name)
+
+    def update_tuning(self, tuning_name: str) -> None:
+        """Update the currently selected tuning (thread-safe)."""
+        self.app.call_from_thread(self.app.update_tuning, tuning_name)
+
+    def update_octave(self, octave: int) -> None:
+        """Update the current octave (thread-safe)."""
+        self.app.call_from_thread(self.app.update_octave, octave)
+
+
 class StatusPanel(Widget):
     """Panel for displaying status messages."""
 

@@ -24,7 +24,7 @@ from abc import ABC, abstractmethod
 import contextlib
 from dataclasses import dataclass, field
 import functools
-from typing import Callable, Generator
+from typing import Generator
 
 import pynput
 import rtmidi
@@ -34,6 +34,7 @@ import supriya
 import supriya.conversions
 
 import synths
+from tui import StateManager
 
 
 def list_midi_ports():
@@ -55,22 +56,14 @@ class PolyphonyManager:
     # The server to act on.
     server: supriya.Context
     theory: MusicTheory
+    # State manager for UI updates.
+    state_manager: StateManager
     # A dictionary of MIDI note numbers to synths.
     notes: dict[int, supriya.Synth] = field(default_factory=dict)
     # Target node to add relative to.
     target_node: supriya.Node | None = None
     # Add action to use.
     add_action: supriya.AddAction = supriya.AddAction.ADD_TO_HEAD
-    # Optional callback for note on events (note_number, frequency, velocity).
-    note_on_callback: Callable[[int, float, int], None] | None = None
-    # Optional callback for note off events (note_number).
-    note_off_callback: Callable[[int], None] | None = None
-    # Optional callback for synth change events (synth_name).
-    synth_change_callback: Callable[[str], None] | None = None
-    # Optional callback for tuning change events (tuning_name).
-    tuning_change_callback: Callable[[str], None] | None = None
-    # Optional callback for octave change events (octave).
-    octave_change_callback: Callable[[int], None] | None = None
 
     def free_all(self) -> None:
         """
@@ -98,8 +91,7 @@ class PolyphonyManager:
             synthdef=self.theory.synthdef,
             target_node=self.target_node,
         )
-        if self.note_on_callback:
-            self.note_on_callback(note_number, frequency, velocity)
+        self.state_manager.add_note(note_number, frequency, velocity)
 
     def note_off(self, note_number: int) -> None:
         """
@@ -110,9 +102,7 @@ class PolyphonyManager:
             return
         # Pop the synth out of the dictionary and free it.
         self.notes.pop(note_number).free()
-        # Call the callback if provided.
-        if self.note_off_callback:
-            self.note_off_callback(note_number)
+        self.state_manager.remove_note(note_number)
 
 
 @dataclass
@@ -226,34 +216,27 @@ class QwertyHandler(InputHandler):
             return
         if key.char == 'z':
             self.octave = max(self.octave - 1, 0)
-            if polyphony_manager.octave_change_callback:
-                polyphony_manager.octave_change_callback(self.octave)
+            polyphony_manager.state_manager.update_octave(self.octave)
             return
         if key.char == 'x':
             self.octave = min(self.octave + 1, 10)
-            if polyphony_manager.octave_change_callback:
-                polyphony_manager.octave_change_callback(self.octave)
+            polyphony_manager.state_manager.update_octave(self.octave)
             return
         if key.char == 'c':
             polyphony_manager.theory.synthdef = synths.default
-            if polyphony_manager.synth_change_callback:
-                polyphony_manager.synth_change_callback('default')
+            polyphony_manager.state_manager.update_synth('default')
         if key.char == 'v':
             polyphony_manager.theory.synthdef = synths.simple_sine
-            if polyphony_manager.synth_change_callback:
-                polyphony_manager.synth_change_callback('simple_sine')
+            polyphony_manager.state_manager.update_synth('simple_sine')
         if key.char == 'b':
             polyphony_manager.theory.synthdef = synths.mockingboard
-            if polyphony_manager.synth_change_callback:
-                polyphony_manager.synth_change_callback('mockingboard')
+            polyphony_manager.state_manager.update_synth('mockingboard')
         if key.char == 'n':
             polyphony_manager.theory.tuning = JustIntonation(key='A')
-            if polyphony_manager.tuning_change_callback:
-                polyphony_manager.tuning_change_callback('JustIntonation')
+            polyphony_manager.state_manager.update_tuning('JustIntonation')
         if key.char == 'm':
             polyphony_manager.theory.tuning = EqualTemperament()
-            if polyphony_manager.tuning_change_callback:
-                polyphony_manager.tuning_change_callback('EqualTemperament')
+            polyphony_manager.state_manager.update_tuning('EqualTemperament')
 
         if key in self.presses_to_note_numbers:
             return  # Already pressed.
