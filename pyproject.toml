@@ -11,3 +11,8 @@ dependencies = [
     "supriya>=25.9b1",
     "textual>=6.6.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]

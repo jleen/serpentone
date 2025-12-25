@@ -87,6 +87,13 @@ class NotePanel(Widget):
                     f"  Note {note_num}: {info['frequency']:.2f} Hz "
                     f"(velocity: {info['velocity']})"
                 )
+            if len(self.active_notes.values()) == 2:
+                vals = list(self.active_notes.values())
+                first = vals[0]['frequency']
+                second = vals[1]['frequency']
+                if first < second:
+                    first, second = second, first
+                lines.append(f'ratio {first/second}')
             content = '\n'.join(lines)
         yield Static(content)
 
