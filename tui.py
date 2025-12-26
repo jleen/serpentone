@@ -1,6 +1,7 @@
 """
 TUI components.
 """
+from play import PolyphonyManager
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -197,10 +198,11 @@ class SerpentoneApp(App):
     status_messages = reactive[list[str]](list)
     notes = reactive[dict](dict)
 
-    def __init__(self, init):
+    def __init__(self, init, polyphony_manager: PolyphonyManager):
         super().__init__()
         self.init = init
-        self.polyphony_manager = None  # Will be set during initialization
+        self.polyphony_manager = polyphony_manager
+        self.current_synth = polyphony_manager.theory.synthdef.name or '(none)'
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
