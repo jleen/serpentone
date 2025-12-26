@@ -35,6 +35,7 @@ import supriya.conversions
 
 import synths
 from tui import StateManager
+from exception_handler import wrap_callback, wrap_call_from_thread, check_call_from_thread_exception
 
 
 def list_midi_ports():
@@ -81,7 +82,12 @@ class PolyphonyManager:
         # Bail if we already started this note.
         if note_number in self.notes:
             return
-        frequency = self.theory.tuning.midi_note_number_to_frequency(note_number)
+        wrapped = wrap_call_from_thread(
+            lambda: self.theory.tuning.midi_note_number_to_frequency(note_number),
+            {"source": "PolyphonyManager", "method": "note_on"}
+        )
+        frequency = self.state_manager.app.call_from_thread(wrapped)
+        check_call_from_thread_exception()
         amplitude = supriya.conversions.midi_velocity_to_amplitude(velocity)
         # Create a synth and store a reference by MIDI note number in the dictionary.
         self.notes[note_number] = self.server.add_synth(
@@ -139,7 +145,10 @@ class MidiHandler(InputHandler):
         Context manager for listening to MIDI input events.
         """
         self.midi_input = rtmidi.MidiIn()  # type: ignore
-        self.midi_input.set_callback(functools.partial(self.handle, polyphony_manager))
+        wrapped_handle = wrap_callback("MIDI", "note_event")(
+            functools.partial(self.handle, polyphony_manager)
+        )
+        self.midi_input.set_callback(wrapped_handle)
         self.midi_input.open_port(self.port)
         print('Listening for MIDI keyboard events ...')
         yield
@@ -183,8 +192,12 @@ class QwertyHandler(InputHandler):
         Context manager for listening to QWERTY input events.
         """
         self.listener = pynput.keyboard.Listener(
-            on_press=functools.partial(self.on_press, polyphony_manager),
-            on_release=functools.partial(self.on_release, polyphony_manager),
+            on_press=wrap_callback("Keyboard", "key_press")(
+                functools.partial(self.on_press, polyphony_manager)
+            ),
+            on_release=wrap_callback("Keyboard", "key_release")(
+                functools.partial(self.on_release, polyphony_manager)
+            ),
         )
         self.listener.start()
         print('Listening for QWERTY keyboard events ...')
@@ -238,7 +251,7 @@ class QwertyHandler(InputHandler):
             polyphony_manager.theory.tuning = EqualTemperament()
             polyphony_manager.state_manager.update_tuning('EqualTemperament')
         if key.char == ',':
-            polyphony_manager.theory.tuning = JustIntonation(key='C')
+            polyphony_manager.theory.tuning = RatioBasedTuning()
             polyphony_manager.state_manager.update_tuning('JustC')
         if key.char == '.':
             polyphony_manager.theory.tuning = Pythagorean(key='C')
@@ -301,6 +314,7 @@ class RatioBasedTuning(Tuning):
         Returns:
             Frequency in Hz
         """
+        raise Exception('lolol')
         # MIDI note 69 is A4 at 440 Hz (our reference pitch)
         reference_midi = 69  # A4
         reference_freq = 440.0

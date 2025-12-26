@@ -1,4 +1,5 @@
 import argparse
+import threading
 import time
 
 import supriya
@@ -14,17 +15,29 @@ from play import (
 )
 import synths
 from tui import SerpentoneApp, StateManager
+from exception_handler import wrap_callback, ExceptionHandler
 
 
 def run(input_handler: InputHandler, synth) -> None:
     """
     Run the script with TUI.
     """
+    # Install global thread exception hook for defense in depth
+    def thread_exception_hook(args):
+        ExceptionHandler.log_and_crash(args.exc_value, {
+            "source": "Unhandled",
+            "thread": args.thread.name,
+        })
+
+    threading.excepthook = thread_exception_hook
+
+    @wrap_callback("SuperCollider", "boot")
     def on_boot(*args) -> None:  # Run this during server.boot().
         server.add_synthdefs(synths.simple_sine, synths.mockingboard, synths.default)
         server.sync()  # Wait for the synthdef to load before moving on.
         app.add_status('Server booted successfully')
 
+    @wrap_callback("SuperCollider", "quitting")
     def on_quitting(*args) -> None:
         """
         Callback that occurs *before* Supercollider quits via server.quit.

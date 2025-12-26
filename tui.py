@@ -7,6 +7,8 @@ from textual.containers import Container
 from textual.reactive import reactive
 from textual.widgets import Static
 
+from exception_handler import wrap_call_from_thread, check_call_from_thread_exception
+
 
 class StateManager:
     """Manages state updates for the Serpentone app, handling thread-safety."""
@@ -16,23 +18,48 @@ class StateManager:
 
     def add_note(self, note_number: int, frequency: float, velocity: int) -> None:
         """Add a playing note (thread-safe)."""
-        self.app.call_from_thread(self.app.add_note, note_number, frequency, velocity)
+        wrapped = wrap_call_from_thread(
+            lambda: self.app.add_note(note_number, frequency, velocity),
+            {"source": "StateManager", "method": "add_note"}
+        )
+        self.app.call_from_thread(wrapped)
+        check_call_from_thread_exception()
 
     def remove_note(self, note_number: int) -> None:
         """Remove a playing note (thread-safe)."""
-        self.app.call_from_thread(self.app.remove_note, note_number)
+        wrapped = wrap_call_from_thread(
+            lambda: self.app.remove_note(note_number),
+            {"source": "StateManager", "method": "remove_note"}
+        )
+        self.app.call_from_thread(wrapped)
+        check_call_from_thread_exception()
 
     def update_synth(self, synth_name: str) -> None:
         """Update the currently selected synth (thread-safe)."""
-        self.app.call_from_thread(self.app.update_synth, synth_name)
+        wrapped = wrap_call_from_thread(
+            lambda: self.app.update_synth(synth_name),
+            {"source": "StateManager", "method": "update_synth"}
+        )
+        self.app.call_from_thread(wrapped)
+        check_call_from_thread_exception()
 
     def update_tuning(self, tuning_name: str) -> None:
         """Update the currently selected tuning (thread-safe)."""
-        self.app.call_from_thread(self.app.update_tuning, tuning_name)
+        wrapped = wrap_call_from_thread(
+            lambda: self.app.update_tuning(tuning_name),
+            {"source": "StateManager", "method": "update_tuning"}
+        )
+        self.app.call_from_thread(wrapped)
+        check_call_from_thread_exception()
 
     def update_octave(self, octave: int) -> None:
         """Update the current octave (thread-safe)."""
-        self.app.call_from_thread(self.app.update_octave, octave)
+        wrapped = wrap_call_from_thread(
+            lambda: self.app.update_octave(octave),
+            {"source": "StateManager", "method": "update_octave"}
+        )
+        self.app.call_from_thread(wrapped)
+        check_call_from_thread_exception()
 
 
 class StatusPanel(Widget):
@@ -210,6 +237,7 @@ class SerpentoneApp(App):
             'frequency': frequency,
             'velocity': velocity
         }
+        raise Exception('noted!')
         self.mutate_reactive(SerpentoneApp.notes)
 
     def remove_note(self, note_number: int) -> None:
