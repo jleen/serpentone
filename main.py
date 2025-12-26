@@ -6,7 +6,7 @@ import supriya
 import synths
 from input import InputHandler, MidiHandler, QwertyHandler, list_midi_ports
 from play import MusicTheory, PolyphonyManager
-from tui import SerpentoneApp, StateManager
+from tui import SerpentoneApp, AppDispatch
 from tuning import EqualTemperament
 
 
@@ -42,7 +42,7 @@ def run(input_handler: InputHandler, synth) -> None:
     server = supriya.Server()
     theory = MusicTheory(tuning=EqualTemperament(), synthdef=synth)
     app = SerpentoneApp(start_server_and_listener)
-    state_manager = StateManager(app)
+    app_dispatch = AppDispatch(app)
     app.current_tuning = 'EqualTemperament'
     app.current_synth = synth.name
     # Set initial octave if using QwertyHandler
@@ -51,10 +51,9 @@ def run(input_handler: InputHandler, synth) -> None:
     polyphony = PolyphonyManager(
         server=server,
         theory=theory,
-        state_manager=state_manager,
     )
     app.polyphony_manager = polyphony
-    listener = input_handler.listen(polyphony)
+    listener = input_handler.listen(app_dispatch)
 
     # Now we run the Textual app, which starts the event pump.
     # The app has an on_mount callback that will start Supercollider and the input listener.

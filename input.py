@@ -2,14 +2,13 @@ import contextlib
 import functools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Generator
+from typing import Generator
 
 import pynput
 import rtmidi
 import rtmidi.midiutil
 
-if TYPE_CHECKING:
-    from play import PolyphonyManager
+from tui import AppDispatch
 
 
 def list_midi_ports():
@@ -28,7 +27,7 @@ class InputHandler(ABC):
     @contextlib.contextmanager
     @abstractmethod
     def listen(
-        self, polyphony_manager: "PolyphonyManager"
+        self, app_dispatch: AppDispatch
     ) -> Generator[None, None, None]:
         # Subclasses must implement this method.
         # 1) Start the handler's listener.
@@ -47,13 +46,13 @@ class MidiHandler(InputHandler):
 
     @contextlib.contextmanager
     def listen(
-        self, polyphony_manager: "PolyphonyManager"
+        self, app_dispatch: AppDispatch
     ) -> Generator[None, None, None]:
         """
         Context manager for listening to MIDI input events.
         """
         self.midi_input = rtmidi.MidiIn()  # type:ignore
-        self.midi_input.set_callback(functools.partial(self.handle, polyphony_manager))
+        self.midi_input.set_callback(functools.partial(self.handle, app_dispatch))
         self.midi_input.open_port(self.port)
         print('Listening for MIDI keyboard events ...')
         yield
@@ -61,7 +60,7 @@ class MidiHandler(InputHandler):
 
     def handle(
         self,
-        polyphony_manager: "PolyphonyManager",
+        app_dispatch: AppDispatch,
         event: tuple[tuple[int, int, int], float],
         *args,
     ) -> None:
@@ -71,7 +70,7 @@ class MidiHandler(InputHandler):
         # The raw MIDI event is a 2-tuple of MIDI data and time delta.
         # Unpack it, keep the data and discard the time delta.
         [func, note_number, velocity], _ = event
-        polyphony_manager.state_manager.handle_midi_event(func, note_number, velocity)
+        app_dispatch.handle_midi_event(func, note_number, velocity)
 
 
 @dataclass
@@ -85,14 +84,14 @@ class QwertyHandler(InputHandler):
 
     @contextlib.contextmanager
     def listen(
-        self, polyphony_manager: "PolyphonyManager"
+        self, app_dispatch: AppDispatch
     ) -> Generator[None, None, None]:
         """
         Context manager for listening to QWERTY input events.
         """
         self.listener = pynput.keyboard.Listener(
-            on_press=functools.partial(self.on_press, polyphony_manager),
-            on_release=functools.partial(self.on_release, polyphony_manager),
+            on_press=functools.partial(self.on_press, app_dispatch),
+            on_release=functools.partial(self.on_release, app_dispatch),
         )
         self.listener.start()
         print('Listening for QWERTY keyboard events ...')
@@ -112,7 +111,7 @@ class QwertyHandler(InputHandler):
 
     def on_press(
         self,
-        polyphony_manager: "PolyphonyManager",
+        app_dispatch: AppDispatch,
         key: pynput.keyboard.Key | pynput.keyboard.KeyCode | None,
     ) -> None:
         """
@@ -122,11 +121,11 @@ class QwertyHandler(InputHandler):
             return
         if key.char is None:
             return
-        polyphony_manager.state_manager.handle_key_press(key.char, self)
+        app_dispatch.handle_key_press(key.char, self)
 
     def on_release(
         self,
-        polyphony_manager: "PolyphonyManager",
+        app_dispatch: AppDispatch,
         key: pynput.keyboard.Key | pynput.keyboard.KeyCode | None,
     ) -> None:
         """
@@ -136,4 +135,4 @@ class QwertyHandler(InputHandler):
             return  # Bail if we didn't get a keycode object.
         if key.char is None:
             return
-        polyphony_manager.state_manager.handle_key_release(key.char, self)
+        app_dispatch.handle_key_release(key.char, self)

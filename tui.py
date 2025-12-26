@@ -20,8 +20,8 @@ class QwertyState(Protocol):
     presses_to_note_numbers: dict
 
 
-class StateManager:
-    """Manages state updates for the Serpentone app, handling thread-safety."""
+class AppDispatch:
+    """Dispatches input events the Serpentone app, handling thread-safety."""
 
     def __init__(self, app: 'SerpentoneApp'):
         self.app = app

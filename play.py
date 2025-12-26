@@ -25,7 +25,6 @@ from dataclasses import dataclass, field
 import supriya
 import supriya.conversions
 
-from tui import StateManager
 from tuning import Tuning
 
 
@@ -41,8 +40,6 @@ class PolyphonyManager:
     # The server to act on.
     server: supriya.Context
     theory: MusicTheory
-    # State manager for UI updates.
-    state_manager: StateManager
     # A dictionary of MIDI note numbers to synths.
     notes: dict[int, supriya.Synth] = field(default_factory=dict)
     # Target node to add relative to.
