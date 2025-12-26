@@ -1,6 +1,7 @@
 """
 TUI components.
 """
+from textual.message import Message
 from textual.widget import Widget
 from textual.app import App, ComposeResult
 from textual.containers import Container
@@ -16,23 +17,23 @@ class StateManager:
 
     def add_note(self, note_number: int, frequency: float, velocity: int) -> None:
         """Add a playing note (thread-safe)."""
-        self.app.call_from_thread(self.app.add_note, note_number, frequency, velocity)
+        self.app.post_message(SerpentoneApp.AddNote(note_number, frequency, velocity))
 
     def remove_note(self, note_number: int) -> None:
         """Remove a playing note (thread-safe)."""
-        self.app.call_from_thread(self.app.remove_note, note_number)
+        self.app.post_message(SerpentoneApp.RemoveNote(note_number))
 
     def update_synth(self, synth_name: str) -> None:
         """Update the currently selected synth (thread-safe)."""
-        self.app.call_from_thread(self.app.update_synth, synth_name)
+        self.app.post_message(SerpentoneApp.UpdateSynth(synth_name))
 
     def update_tuning(self, tuning_name: str) -> None:
         """Update the currently selected tuning (thread-safe)."""
-        self.app.call_from_thread(self.app.update_tuning, tuning_name)
+        self.app.post_message(SerpentoneApp.UpdateTuning(tuning_name))
 
     def update_octave(self, octave: int) -> None:
         """Update the current octave (thread-safe)."""
-        self.app.call_from_thread(self.app.update_octave, octave)
+        self.app.post_message(SerpentoneApp.UpdateOctave(octave))
 
 
 class StatusPanel(Widget):
@@ -100,6 +101,38 @@ class NotePanel(Widget):
 
 class SerpentoneApp(App):
     """Main Textual application for Serpentone."""
+
+    class AddNote(Message):
+        """Message to add a playing note."""
+        def __init__(self, note_number: int, frequency: float, velocity: int):
+            super().__init__()
+            self.note_number = note_number
+            self.frequency = frequency
+            self.velocity = velocity
+
+    class RemoveNote(Message):
+        """Message to remove a playing note."""
+        def __init__(self, note_number: int):
+            super().__init__()
+            self.note_number = note_number
+
+    class UpdateSynth(Message):
+        """Message to update the currently selected synth."""
+        def __init__(self, synth_name: str):
+            super().__init__()
+            self.synth_name = synth_name
+
+    class UpdateTuning(Message):
+        """Message to update the currently selected tuning."""
+        def __init__(self, tuning_name: str):
+            super().__init__()
+            self.tuning_name = tuning_name
+
+    class UpdateOctave(Message):
+        """Message to update the current octave."""
+        def __init__(self, octave: int):
+            super().__init__()
+            self.octave = octave
 
     CSS = """
     Screen {
@@ -204,28 +237,28 @@ class SerpentoneApp(App):
             self.status_messages[:] = self.status_messages[-20:]
         self.mutate_reactive(SerpentoneApp.status_messages)
 
-    def add_note(self, note_number: int, frequency: float, velocity: int) -> None:
-        """Add a playing note."""
-        self.notes[note_number] = {
-            'frequency': frequency,
-            'velocity': velocity
+    def on_serpentone_app_add_note(self, message: AddNote) -> None:
+        """Handle AddNote message."""
+        self.notes[message.note_number] = {
+            'frequency': message.frequency,
+            'velocity': message.velocity
         }
         self.mutate_reactive(SerpentoneApp.notes)
 
-    def remove_note(self, note_number: int) -> None:
-        """Remove a playing note."""
-        if note_number in self.notes:
-            del self.notes[note_number]
+    def on_serpentone_app_remove_note(self, message: RemoveNote) -> None:
+        """Handle RemoveNote message."""
+        if message.note_number in self.notes:
+            del self.notes[message.note_number]
         self.mutate_reactive(SerpentoneApp.notes)
 
-    def update_synth(self, synth_name: str) -> None:
-        """Update the currently selected synth."""
-        self.current_synth = synth_name
+    def on_serpentone_app_update_synth(self, message: UpdateSynth) -> None:
+        """Handle UpdateSynth message."""
+        self.current_synth = message.synth_name
 
-    def update_tuning(self, tuning_name: str) -> None:
-        """Update the currently selected tuning."""
-        self.current_tuning = tuning_name
+    def on_serpentone_app_update_tuning(self, message: UpdateTuning) -> None:
+        """Handle UpdateTuning message."""
+        self.current_tuning = message.tuning_name
 
-    def update_octave(self, octave: int) -> None:
-        """Update the current octave."""
-        self.current_octave = octave
+    def on_serpentone_app_update_octave(self, message: UpdateOctave) -> None:
+        """Handle UpdateOctave message."""
+        self.current_octave = message.octave

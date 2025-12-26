@@ -138,7 +138,7 @@ class MidiHandler(InputHandler):
         """
         Context manager for listening to MIDI input events.
         """
-        self.midi_input = rtmidi.MidiIn()  # type: ignore
+        self.midi_input = rtmidi.MidiIn()
         self.midi_input.set_callback(functools.partial(self.handle, polyphony_manager))
         self.midi_input.open_port(self.port)
         print('Listening for MIDI keyboard events ...')
