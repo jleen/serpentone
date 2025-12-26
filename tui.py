@@ -1,6 +1,7 @@
 """
 TUI components.
 """
+from dataclasses import dataclass
 from typing import Protocol
 
 import rtmidi.midiconstants
@@ -105,27 +106,24 @@ class NotePanel(Widget):
 class SerpentoneApp(App):
     """Main Textual application for Serpentone."""
 
+    @dataclass
     class HandleMidiEvent(Message):
         """Message to handle a raw MIDI input event."""
-        def __init__(self, func: int, note_number: int, velocity: int):
-            super().__init__()
-            self.func = func
-            self.note_number = note_number
-            self.velocity = velocity
+        func: int
+        note_number: int
+        velocity: int
 
+    @dataclass
     class HandleKeyPress(Message):
         """Message to handle a QWERTY key press."""
-        def __init__(self, key_char: str, input_handler: QwertyState):
-            super().__init__()
-            self.key_char = key_char
-            self.input_handler = input_handler
+        key_char: str
+        input_handler: QwertyState
 
+    @dataclass
     class HandleKeyRelease(Message):
         """Message to handle a QWERTY key release."""
-        def __init__(self, key_char: str, input_handler: QwertyState):
-            super().__init__()
-            self.key_char = key_char
-            self.input_handler = input_handler
+        key_char: str
+        input_handler: QwertyState
 
     CSS = """
     Screen {
