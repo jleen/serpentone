@@ -234,6 +234,9 @@ class RatioBasedTuning(Tuning):
         'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11
     }
 
+    key: str
+    RATIOS: list[float]
+
     def midi_note_number_to_frequency(self, note_number: float) -> float:
         """
         Helper method to calculate frequency using ratio-based tuning systems.
