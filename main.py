@@ -49,15 +49,17 @@ def run(input_handler: InputHandler, synth) -> None:
     theory = MusicTheory(tuning=EqualTemperament(), synthdef=synth)
     app = SerpentoneApp(start_server_and_listener)
     state_manager = StateManager(app)
-    state_manager.update_tuning('EqualTemperament')
+    app.current_tuning = 'EqualTemperament'
+    app.current_synth = synth.name
     # Set initial octave if using QwertyHandler
     if isinstance(input_handler, QwertyHandler):
-        state_manager.update_octave(input_handler.octave)
+        app.current_octave = input_handler.octave
     polyphony = PolyphonyManager(
         server=server,
         theory=theory,
         state_manager=state_manager,
     )
+    app.polyphony_manager = polyphony
     listener = input_handler.listen(polyphony)
 
     # Now we run the Textual app, which starts the event pump.

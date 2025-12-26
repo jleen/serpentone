@@ -33,7 +33,6 @@ import rtmidi.midiutil
 import supriya
 import supriya.conversions
 
-import synths
 from tui import StateManager
 
 
@@ -91,7 +90,6 @@ class PolyphonyManager:
             synthdef=self.theory.synthdef,
             target_node=self.target_node,
         )
-        self.state_manager.add_note(note_number, frequency, velocity)
 
     def note_off(self, note_number: int) -> None:
         """
@@ -102,7 +100,6 @@ class PolyphonyManager:
             return
         # Pop the synth out of the dictionary and free it.
         self.notes.pop(note_number).free()
-        self.state_manager.remove_note(note_number)
 
 
 @dataclass
@@ -138,7 +135,7 @@ class MidiHandler(InputHandler):
         """
         Context manager for listening to MIDI input events.
         """
-        self.midi_input = rtmidi.MidiIn()
+        self.midi_input = rtmidi.MidiIn()  # type:ignore
         self.midi_input.set_callback(functools.partial(self.handle, polyphony_manager))
         self.midi_input.open_port(self.port)
         print('Listening for MIDI keyboard events ...')
@@ -157,13 +154,7 @@ class MidiHandler(InputHandler):
         # The raw MIDI event is a 2-tuple of MIDI data and time delta.
         # Unpack it, keep the data and discard the time delta.
         [func, note_number, velocity], _ = event
-        if rtmidi.midiconstants.NOTE_ON <= func < rtmidi.midiconstants.NOTE_ON + 16:
-            if velocity == 0:
-                polyphony_manager.note_off(note_number=note_number)
-            else:
-                polyphony_manager.note_on(note_number=note_number, velocity=velocity)
-        elif rtmidi.midiconstants.NOTE_OFF <= func < rtmidi.midiconstants.NOTE_OFF + 16:
-            polyphony_manager.note_off(note_number=note_number)
+        polyphony_manager.state_manager.handle_midi_event(func, note_number, velocity)
 
 
 @dataclass
@@ -214,50 +205,7 @@ class QwertyHandler(InputHandler):
             return
         if key.char is None:
             return
-        if key.char == 'z':
-            self.octave = max(self.octave - 1, 0)
-            polyphony_manager.state_manager.update_octave(self.octave)
-            return
-        if key.char == 'x':
-            self.octave = min(self.octave + 1, 10)
-            polyphony_manager.state_manager.update_octave(self.octave)
-            return
-        if key.char == 'c':
-            polyphony_manager.theory.synthdef = synths.default
-            polyphony_manager.state_manager.update_synth('default')
-        if key.char == 'v':
-            polyphony_manager.theory.synthdef = synths.simple_sine
-            polyphony_manager.state_manager.update_synth('simple_sine')
-        if key.char == 'b':
-            polyphony_manager.theory.synthdef = synths.mockingboard
-            polyphony_manager.state_manager.update_synth('mockingboard')
-        if key.char == 'n':
-            polyphony_manager.theory.tuning = JustIntonation(key='A')
-            polyphony_manager.state_manager.update_tuning('JustA')
-        if key.char == 'm':
-            polyphony_manager.theory.tuning = EqualTemperament()
-            polyphony_manager.state_manager.update_tuning('EqualTemperament')
-        if key.char == ',':
-            polyphony_manager.theory.tuning = JustIntonation(key='C')
-            polyphony_manager.state_manager.update_tuning('JustC')
-        if key.char == '.':
-            polyphony_manager.theory.tuning = Pythagorean(key='C')
-            polyphony_manager.state_manager.update_tuning('PythC')
-        if key.char == '/':
-            polyphony_manager.theory.tuning = Pythagorean(key='A')
-            polyphony_manager.state_manager.update_tuning('PythA')
-
-        if key in self.presses_to_note_numbers:
-            return  # Already pressed.
-        if (pitch := self.qwerty_key_to_pitch_number(key.char)) is None:
-            return  # Not a valid key, ignore it.
-        # Calculate the note number from the pitch and octave.
-        note_number = pitch + self.octave * 12
-        velocity = 64
-        # Stash the note number with the key for releasing later.
-        # This ensures that changing the octave doesn't prevent releasing.
-        self.presses_to_note_numbers[key.char] = note_number
-        polyphony_manager.note_on(note_number=note_number, velocity=velocity)
+        polyphony_manager.state_manager.handle_key_press(key.char, self)
 
     def on_release(
         self,
@@ -269,12 +217,9 @@ class QwertyHandler(InputHandler):
         """
         if not isinstance(key, pynput.keyboard.KeyCode):
             return  # Bail if we didn't get a keycode object.
-        # Bail if the key isn't currently held down.
-        if key.char not in self.presses_to_note_numbers:
+        if key.char is None:
             return
-        # Grab the note number out of the stash.
-        note_number = self.presses_to_note_numbers.pop(key.char)
-        polyphony_manager.note_off(note_number=note_number)
+        polyphony_manager.state_manager.handle_key_release(key.char, self)
 
 
 @dataclass
