@@ -2,13 +2,17 @@
 TUI components.
 """
 from typing import Protocol
-from textual.message import Message
-from textual.widget import Widget
+
+import rtmidi.midiconstants
 from textual.app import App, ComposeResult
 from textual.containers import Container
+from textual.message import Message
 from textual.reactive import reactive
+from textual.widget import Widget
 from textual.widgets import Static
-import rtmidi.midiconstants
+
+import synths
+from tuning import EqualTemperament, JustIntonation, Pythagorean
 
 
 class QwertyState(Protocol):
@@ -258,8 +262,6 @@ class SerpentoneApp(App):
 
     def on_serpentone_app_handle_key_press(self, message: HandleKeyPress) -> None:
         """Handle QWERTY key press."""
-        import synths
-        from play import JustIntonation, EqualTemperament, Pythagorean
 
         if self.polyphony_manager is None:
             return

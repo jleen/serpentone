@@ -3,17 +3,11 @@ import time
 
 import supriya
 
-from play import (
-    EqualTemperament,
-    MusicTheory,
-    list_midi_ports,
-    InputHandler,
-    MidiHandler,
-    PolyphonyManager,
-    QwertyHandler,
-)
 import synths
+from input import InputHandler, MidiHandler, QwertyHandler, list_midi_ports
+from play import MusicTheory, PolyphonyManager
 from tui import SerpentoneApp, StateManager
+from tuning import EqualTemperament
 
 
 def run(input_handler: InputHandler, synth) -> None:

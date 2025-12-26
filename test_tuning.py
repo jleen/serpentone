@@ -2,7 +2,7 @@
 
 import pytest
 import math
-from play import JustIntonation, EqualTemperament, Pythagorean
+from tuning import JustIntonation, EqualTemperament, Pythagorean
 import supriya.conversions
 
 
