@@ -10,7 +10,7 @@ from tui import SerpentoneApp, AppDispatch
 from tuning import EqualTemperament
 
 
-def run(input_handler: InputHandler, synth) -> None:
+def run(input_handlers: list[InputHandler], synth) -> None:
     """
     Run the script with TUI.
     """
@@ -26,7 +26,8 @@ def run(input_handler: InputHandler, synth) -> None:
         polyphony.free_all()  # Free all the synths.
         time.sleep(0.5)  # Wait for them to fade out before moving on.
         print('Supercollider shutting down')
-        listener.__exit__(None, None, None)
+        for listener in listeners:
+            listener.__exit__(None, None, None)
         print('Input listener stopped')
 
     def start_server_and_listener() -> None:
@@ -34,9 +35,11 @@ def run(input_handler: InputHandler, synth) -> None:
         server.register_lifecycle_callback('QUITTING', on_quitting)
         server.boot()
         app.add_status('Server online. Press C-q to exit.')
-        input_type = type(input_handler).__name__.replace('Handler', '')
-        app.add_status(f'Listening for {input_type} keyboard events...')
-        listener.__enter__()
+        for input_handler in input_handlers:
+            input_type = type(input_handler).__name__.replace('Handler', '')
+            app.add_status(f'Listening for {input_type} keyboard events...')
+        for listener in listeners:
+            listener.__enter__()
 
     # First we wire up some objects. Nothing exciting happens yet.
     server = supriya.Server()
@@ -49,10 +52,9 @@ def run(input_handler: InputHandler, synth) -> None:
     app_dispatch = AppDispatch(app)
     app.current_tuning = 'EqualTemperament'
     # Set initial octave if using QwertyHandler
-    if isinstance(input_handler, QwertyHandler):
-        app.current_octave = input_handler.octave
+    app.current_octave = 5
     app.polyphony_manager = polyphony
-    listener = input_handler.listen(app_dispatch)
+    listeners = [input_handler.listen(app_dispatch) for input_handler in input_handlers]
 
     # Now we run the Textual app, which starts the event pump.
     # The app has an on_mount callback that will start Supercollider and the input listener.
@@ -99,9 +101,9 @@ def main(args: list[str] | None = None) -> None:
     if parsed_args.list_midi_inputs:
         list_midi_ports()
     elif parsed_args.midi is not None:
-        run(MidiHandler(port=parsed_args.midi), synth)
+        run([MidiHandler(port=parsed_args.midi), QwertyHandler()], synth)
     elif parsed_args.qwerty:
-        run(QwertyHandler(), synth)
+        run([QwertyHandler()], synth)
 
 
 if __name__ == "__main__":
