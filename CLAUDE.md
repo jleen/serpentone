@@ -133,11 +133,10 @@ Update UI reactive state (notes_panel)
 ## Gotchas and Quirks
 
 1. **Python 3.14 Required:** Uses bleeding-edge features, won't run on older versions
-2. **Supriya Type Stubs:** Custom stubs in `supriya-stubs/` because library lacks types
+2. **Supriya Type Stubs:** Custom stubs in `supriya-stubs/` because `ty` can’t handle UGen types automatically
 3. **Manual Reactive Mutation:** After modifying reactive dicts/lists in-place, must call `.mutate_reactive(Model.property_name)`
 4. **SuperCollider External Dependency:** Must have `scsynth` installed and accessible
 5. **Polling File Watcher:** Uses simple mtime polling instead of OS events (good enough for this use case)
-6. **Uncommitted Changes:** [input.py](input.py) has removed static method (cleanup in progress)
 
 ## Recent Refactoring History
 
