@@ -182,3 +182,29 @@ Test coverage:
 - **Music theory accuracy:** Tuning systems must be mathematically correct (use cents tests)
 - **Resource cleanup:** Always free synths properly to avoid audio glitches
 - **Reactive updates:** Remember to mutate reactive properties when changing state
+
+## Code Quality Checks (ALWAYS RUN THESE)
+
+**Before considering any code change complete:**
+
+1. **Linting with Ruff:** `uv run ruff check .`
+   - Catches unused imports, variables, and common Python mistakes
+   - Auto-fix most issues with: `uv run ruff check --fix .`
+   - Fast and comprehensive linter
+
+2. **Type Checking with ty:** `uv run ty check`
+   - Validates type annotations across the entire codebase
+   - Catches type mismatches and potential runtime errors
+   - Extremely fast type checker
+
+3. **Syntax Check (fallback):** `uv run python -m py_compile <modified_files.py>`
+   - Quick sanity check for syntax errors
+   - Useful when ruff/ty aren't available
+
+**Workflow:**
+1. Make your code changes
+2. Run `uv run ruff check .` and fix any errors
+3. Run `uv run ty check` and fix any type errors
+4. Commit only after both pass
+
+**Why this matters:** Clean, well-typed code prevents bugs and makes collaboration easier. Running these tools takes seconds but catches issues that could take hours to debug later.
