@@ -98,17 +98,6 @@ class QwertyHandler(InputHandler):
         yield
         self.listener.stop()
 
-    @staticmethod
-    def qwerty_key_to_pitch_number(key: str) -> int | None:
-        """
-        Translate a QWERTY key event into a pitch number.
-        """
-        # Dict lookups are faster, but this is soooo much shorter.
-        try:
-            return "awsedftgyhujkolp;'".index(key)
-        except ValueError:
-            return None
-
     def on_press(
         self,
         app_dispatch: AppDispatch,
