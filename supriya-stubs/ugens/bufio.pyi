@@ -1,8 +1,7 @@
 from typing import Any
 
-from ..enums import CalculationRate, DoneAction
-from ..typing import CalculationRateLike, DEFAULT, Default
-from .core import UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput, UGenVector, UGenVectorInput, param, ugen
+from ..typing import CalculationRateLike
+from .core import UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput, UGenVector, UGenVectorInput
 
 class BufRd(UGen):
     def __init__(self, *, calculation_rate: CalculationRateLike, channel_count: int = 1, buffer_id: UGenScalarInput = ..., phase: UGenScalarInput = ..., loop: UGenScalarInput = ..., interpolation: UGenScalarInput = ..., **kwargs: Any) -> None: ...

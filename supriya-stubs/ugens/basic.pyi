@@ -1,9 +1,7 @@
-from typing import Any, Sequence, SupportsInt, Union
+from typing import Any
 
-from ..enums import CalculationRate
 from ..typing import CalculationRateLike
-from ..utils import flatten
-from .core import PseudoUGen, UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput, UGenVector, UGenVectorInput, param, ugen
+from .core import PseudoUGen, UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput
 
 class Mix(PseudoUGen):
     @classmethod

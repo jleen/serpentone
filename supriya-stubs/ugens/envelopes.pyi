@@ -1,13 +1,12 @@
-from typing import Any, Sequence, SupportsFloat, TYPE_CHECKING, cast
+from typing import Any, Sequence
 
 from ..enums import EnvelopeShape
 from ..typing import CalculationRateLike
-from ..utils import expand_deep
-from .core import OutputProxy, UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput, UGenVector, UGenVectorInput, param, ugen
+from .core import UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput, UGenVector, UGenVectorInput
 
 class Envelope:
     def __init__(self, amplitudes: Sequence[UGenOperable | float] = (0, 1, 0), durations: Sequence[UGenOperable | float] = (1, 1), curves: Sequence[EnvelopeShape | UGenOperable | float | str | None] = (EnvelopeShape.LINEAR, EnvelopeShape.LINEAR), release_node: int | None = None, loop_node: int | None = None, offset: UGenOperable | float = 0.0) -> None: ...
-    def __plot__(self) -> tuple['numpy.ndarray', float]: ...
+    def __plot__(self) -> tuple[Any, float]: ...
     @classmethod
     def adsr(cls, attack_time = 0.01, decay_time = 0.3, sustain = 0.5, release_time = 1.0, peak = 1.0, curve = -4.0, bias = 0.0) -> 'Envelope': ...
     @classmethod

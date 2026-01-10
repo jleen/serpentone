@@ -1,8 +1,7 @@
 from typing import Any
 
-from ..enums import SignalRange
 from ..typing import CalculationRateLike
-from .core import UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput, param, ugen
+from .core import UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput
 
 class KeyState(UGen):
     def __init__(self, *, calculation_rate: CalculationRateLike, keycode: UGenScalarInput = ..., minimum: UGenScalarInput = ..., maximum: UGenScalarInput = ..., lag: UGenScalarInput = ..., **kwargs: Any) -> None: ...

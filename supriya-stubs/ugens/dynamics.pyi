@@ -1,9 +1,7 @@
 from typing import Any
 
-from ..enums import CalculationRate
 from ..typing import CalculationRateLike
-from .core import PseudoUGen, UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput, param, ugen
-from .delay import DelayN
+from .core import PseudoUGen, UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput
 
 class CompanderD(PseudoUGen):
     @classmethod

@@ -1,8 +1,7 @@
 from typing import Any
 
-from ..enums import CalculationRate
-from ..typing import CalculationRateLike, Default
-from .core import UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput, param, ugen
+from ..typing import CalculationRateLike
+from .core import UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput
 
 class Gendy1(UGen):
     def __init__(self, *, calculation_rate: CalculationRateLike, ampdist: UGenScalarInput = ..., durdist: UGenScalarInput = ..., adparam: UGenScalarInput = ..., ddparam: UGenScalarInput = ..., minfrequency: UGenScalarInput = ..., maxfrequency: UGenScalarInput = ..., ampscale: UGenScalarInput = ..., durscale: UGenScalarInput = ..., init_cps: UGenScalarInput = ..., knum: UGenScalarInput = ..., **kwargs: Any) -> None: ...

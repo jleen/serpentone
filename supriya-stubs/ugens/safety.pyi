@@ -1,8 +1,7 @@
 from typing import Any
 
-from ..enums import CalculationRate
 from ..typing import CalculationRateLike
-from .core import UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput, param, ugen
+from .core import UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput
 
 class CheckBadValues(UGen):
     def __init__(self, *, calculation_rate: CalculationRateLike, source: UGenScalarInput = ..., ugen_id: UGenScalarInput = ..., post_mode: UGenScalarInput = ..., **kwargs: Any) -> None: ...

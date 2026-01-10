@@ -1,9 +1,7 @@
 from typing import Any
 
-from ..enums import CalculationRate, DoneAction
 from ..typing import CalculationRateLike
-from .basic import MulAdd
-from .core import PseudoUGen, UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput, UGenVector, param, ugen
+from .core import PseudoUGen, UGen, UGenOperable, UGenRecursiveInput, UGenScalar, UGenScalarInput
 
 class LinLin(PseudoUGen):
     @staticmethod
