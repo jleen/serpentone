@@ -1,7 +1,10 @@
 import argparse
+import importlib
 import time
+from pathlib import Path
 
 import supriya
+from watchfiles import awatch
 
 import synths
 from input import InputHandler, MidiHandler, QwertyHandler, list_midi_ports
@@ -14,10 +17,29 @@ def run(input_handlers: list[InputHandler], synth) -> None:
     """
     Run the script with TUI.
     """
-    def on_boot(*args) -> None:  # Run this during server.boot().
+    def load_synthdefs() -> None:
+        """Load all synthdefs from the synths module into SuperCollider."""
         server.add_synthdefs(synths.simple_sine, synths.mockingboard, synths.default)
         server.sync()  # Wait for the synthdef to load before moving on.
+
+    def on_boot(*args) -> None:  # Run this during server.boot().
+        load_synthdefs()
         app.add_status('Server booted successfully')
+
+    def on_synths_changed() -> None:
+        """Callback when synths.py file changes - hot reload the module."""
+        try:
+            # Reload the synths module.
+            importlib.reload(synths)
+            # Reload synthdefs into SuperCollider.
+            load_synthdefs()
+            # Update the current synthdef reference if it was reloaded.
+            current_synth_name = polyphony.theory.synthdef.name
+            if current_synth_name and hasattr(synths, current_synth_name):
+                polyphony.theory.synthdef = getattr(synths, current_synth_name)
+            app.add_status('Synths reloaded from synths.py')
+        except Exception as e:
+            app.add_status(f'Error reloading synths: {e}')
 
     def on_quitting(*args) -> None:
         """
@@ -30,11 +52,20 @@ def run(input_handlers: list[InputHandler], synth) -> None:
             listener.__exit__(None, None, None)
         print('Input listener stopped')
 
+    async def watch_synths() -> None:
+        """Watch synths.py for changes and reload when modified."""
+        synths_path = Path(__file__).parent / 'synths.py'
+        async for _changes in awatch(synths_path):
+            on_synths_changed()
+
     def start_server_and_listener() -> None:
         server.register_lifecycle_callback('BOOTED', on_boot)
         server.register_lifecycle_callback('QUITTING', on_quitting)
         server.boot()
         app.add_status('Server online. Press C-q to exit.')
+        # Start watching synths.py for changes in a worker.
+        app.run_worker(watch_synths(), exclusive=True)
+        app.add_status('Watching synths.py for changes...')
         for input_handler in input_handlers:
             input_type = type(input_handler).__name__.replace('Handler', '')
             app.add_status(f'Listening for {input_type} keyboard events...')

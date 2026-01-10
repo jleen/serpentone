@@ -12,13 +12,12 @@
 
 | File | Responsibility | Key Classes/Functions |
 |------|---------------|----------------------|
-| [main.py](main.py) | Entry point, orchestration, lifecycle | `main()`, `run()`, boot/quit callbacks |
+| [main.py](main.py) | Entry point, orchestration, lifecycle, hot reload | `main()`, `run()`, `watch_synths()` |
 | [input.py](input.py) | Input handling (QWERTY/MIDI) | `InputHandler`, `QwertyHandler`, `MidiHandler` |
 | [play.py](play.py) | Polyphony & music theory | `PolyphonyManager`, `MusicTheory` |
 | [tui.py](tui.py) | Terminal UI (Textual) | `SerpentoneApp`, panels, message handlers |
 | [tuning.py](tuning.py) | Tuning systems (ET, Just, Pythagorean) | `TuningSystem`, `EqualTemperament`, etc. |
 | [synths.py](synths.py) | Synthdef definitions (hot-reloadable) | `default`, `simple_sine`, `mockingboard` |
-| [watcher.py](watcher.py) | File watcher for hot reload | `FileWatcher` |
 | [test_tuning.py](test_tuning.py) | Comprehensive tuning tests | Test functions for all tuning systems |
 
 ## Architecture Patterns You'll See
@@ -73,8 +72,11 @@ Update UI reactive state (notes_panel)
 - Input handlers run in separate threads, message-passing keeps them decoupled
 
 ### Hot Reloading
-- [synths.py](synths.py) is watched by `FileWatcher` (0.5s poll interval)
+- [synths.py](synths.py) watched using **watchfiles** (Rust-based, instant notifications)
+- Simple async worker: `app.run_worker(watch_file(path, callback))` via Textual
+- Uses OS-native file system events (inotify on Linux, ReadDirectoryChangesW on Windows, FSEvents on macOS)
 - On change: `importlib.reload()` → re-register synthdefs → update `MusicTheory.synthdef`
+- Handles atomic saves correctly (editors that write temp files then rename)
 - Enables live coding workflow without restarting app
 
 ### Tuning System Implementation
@@ -167,6 +169,7 @@ Test coverage:
 - **pynput:** Keyboard input (`keyboard.Listener`)
 - **python-rtmidi:** MIDI device access (`rtmidi.MidiIn`)
 - **mido:** MIDI message parsing (`mido.Message`)
+- **watchfiles:** File system monitoring (Rust-based, async, cross-platform)
 
 ## Configuration
 
@@ -182,6 +185,10 @@ Test coverage:
 - **Music theory accuracy:** Tuning systems must be mathematically correct (use cents tests)
 - **Resource cleanup:** Always free synths properly to avoid audio glitches
 - **Reactive updates:** Remember to mutate reactive properties when changing state
+
+## Style Guidelines
+
+- Prefer formatting comments as sentences, starting with a capital and ending with a period. Do this even for short comments that are not grammatical sentences.
 
 ## Code Quality Checks (ALWAYS RUN THESE)
 

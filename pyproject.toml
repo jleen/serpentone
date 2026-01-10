@@ -10,6 +10,7 @@ dependencies = [
     "python-rtmidi>=1.5.8",
     "supriya>=25.9b1",
     "textual>=6.6.0",
+    "watchfiles>=1.1.1",
 ]
 
 [dependency-groups]
