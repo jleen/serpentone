@@ -69,13 +69,12 @@ class SynthListPanel(Widget):
         if not self.available_synths:
             yield Static('No synths available')
         else:
-            lines = ['Available Synths:']
+            yield Static('Available Synths:')
             for synth_name in self.available_synths:
                 if synth_name == self.current_synth:
-                    lines.append(f'  > {synth_name}')
+                    yield Static(f'  {synth_name}', classes='selected-synth')
                 else:
-                    lines.append(f'    {synth_name}')
-            yield Static('\n'.join(lines))
+                    yield Static(f'  {synth_name}')
 
 
 class TuningPanel(Widget):
@@ -224,6 +223,10 @@ class SerpentoneApp(App):
     SynthListPanel {
         width: 100%;
         height: 100%;
+    }
+
+    .selected-synth {
+        background: $accent;
     }
     """
 
