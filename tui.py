@@ -7,7 +7,7 @@ from typing import Protocol
 
 import rtmidi.midiconstants
 from textual.app import App, ComposeResult
-from textual.containers import Container
+from textual.containers import Container, VerticalScroll
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
@@ -63,18 +63,35 @@ class SynthListPanel(Widget):
     """Panel for displaying the list of available synths with current selection highlighted."""
 
     available_synths = reactive[list[str]](list, recompose=True)
-    current_synth = reactive("", recompose=True)
+    current_synth = reactive("", recompose=False)
 
     def compose(self) -> ComposeResult:
-        if not self.available_synths:
-            yield Static('No synths available')
-        else:
-            yield Static('Available Synths:')
-            for synth_name in self.available_synths:
-                if synth_name == self.current_synth:
-                    yield Static(f'  {synth_name}', classes='selected-synth')
-                else:
-                    yield Static(f'  {synth_name}')
+        with VerticalScroll(id="synth-scroll"):
+            if not self.available_synths:
+                yield Static('No synths available')
+            else:
+                yield Static('Available Synths:')
+                for synth_name in self.available_synths:
+                    yield Static(f'  {synth_name}', id=f'synth-{synth_name}')
+
+    def watch_current_synth(self, old_synth: str, current_synth: str) -> None:
+        """Update highlighting when selection changes."""
+        # Remove highlight from old selection.
+        if old_synth:
+            try:
+                old_widget = self.query_one(f'#synth-{old_synth}', Static)
+                old_widget.remove_class('selected-synth')
+            except Exception:
+                pass  # Old synth widget might not exist.
+
+        # Add highlight to new selection and scroll to it.
+        if current_synth:
+            try:
+                new_widget = self.query_one(f'#synth-{current_synth}', Static)
+                new_widget.add_class('selected-synth')
+                new_widget.scroll_visible()
+            except Exception:
+                pass  # New synth widget might not exist yet.
 
 
 class TuningPanel(Widget):
