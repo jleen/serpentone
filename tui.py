@@ -156,25 +156,25 @@ class SerpentoneApp(App):
 
     #synth-container {
         width: 1fr;
-        border: solid yellow;
+        border: solid #ff6b9d;
         padding: 1;
     }
 
     #tuning-container {
         width: 1fr;
-        border: solid yellow;
+        border: solid #ffa07a;
         padding: 1;
     }
 
     #octave-container {
         width: 1fr;
-        border: solid yellow;
+        border: solid #ffb86c;
         padding: 1;
     }
 
     #status-container {
         height: 1fr;
-        border: solid green;
+        border: solid #50fa7b;
         padding: 1;
     }
 
@@ -185,13 +185,13 @@ class SerpentoneApp(App):
 
     #note-container {
         width: 1fr;
-        border: solid blue;
+        border: solid #8be9fd;
         padding: 1;
     }
 
     #synth-list-container {
         width: 1fr;
-        border: solid cyan;
+        border: solid #bd93f9;
         padding: 1;
     }
 
