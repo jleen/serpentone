@@ -51,6 +51,12 @@ def run(input_handlers: list[InputHandler], synth) -> None:
     def on_synths_changed() -> None:
         """Callback when synths.py file changes - hot reload the module."""
         try:
+            # Get the old list of synths before reloading.
+            old_synths = get_available_synths()
+            # Remove old synthdef attributes from the module to ensure clean reload.
+            for name in old_synths:
+                if hasattr(synths, name):
+                    delattr(synths, name)
             # Reload the synths module.
             importlib.reload(synths)
             # Get the updated list of available synths.
