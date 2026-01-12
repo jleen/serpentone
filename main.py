@@ -39,7 +39,8 @@ def run(input_handlers: list[InputHandler], synth) -> None:
 
     def load_synthdefs() -> None:
         """Load all synthdefs from the synths module into SuperCollider."""
-        synthdef_objects = [getattr(synths, name) for name in available_synths]
+        current_synths = get_available_synths()
+        synthdef_objects = [getattr(synths, name) for name in current_synths]
         server.add_synthdefs(*synthdef_objects)
         server.sync()  # Wait for the synthdef to load before moving on.
 
@@ -52,12 +53,26 @@ def run(input_handlers: list[InputHandler], synth) -> None:
         try:
             # Reload the synths module.
             importlib.reload(synths)
+            # Get the updated list of available synths.
+            new_available_synths = get_available_synths()
             # Reload synthdefs into SuperCollider.
             load_synthdefs()
             # Update the current synthdef reference if it was reloaded.
             current_synth_name = polyphony.theory.synthdef.name
             if current_synth_name and hasattr(synths, current_synth_name):
                 polyphony.theory.synthdef = getattr(synths, current_synth_name)
+            else:
+                # Current synth no longer exists, fall back to "default".
+                polyphony.theory.synthdef = synths.default
+                current_synth_name = 'default'
+                app.current_synth = 'default'
+            # Update the TUI's list of available synths.
+            app.available_synths = new_available_synths
+            # Update the synth index to match the current synth.
+            try:
+                app.synth_index = new_available_synths.index(current_synth_name)
+            except ValueError:
+                app.synth_index = 0
             app.add_status('Synths reloaded from synths.py')
         except Exception as e:
             app.add_status(f'Error reloading synths: {e}')
