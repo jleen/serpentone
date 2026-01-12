@@ -70,12 +70,24 @@ class SynthListPanel(Widget):
             if not self.available_synths:
                 yield Static('No synths available')
             else:
-                yield Static('Available Synths:')
                 for synth_name in self.available_synths:
-                    yield Static(f'  {synth_name}', id=f'synth-{synth_name}')
+                    # Add initial highlighting class if this is the current synth.
+                    classes = 'selected-synth' if synth_name == self.current_synth else ''
+                    yield Static(f'  {synth_name}', id=f'synth-{synth_name}', classes=classes)
+
+    def watch_available_synths(self, available_synths: list[str]) -> None:
+        """When synths list changes, ensure current selection is highlighted."""
+        # After recomposition, apply highlighting to current synth.
+        if self.current_synth:
+            self.call_after_refresh(self._scroll_to_current)
 
     def watch_current_synth(self, old_synth: str, current_synth: str) -> None:
         """Update highlighting when selection changes."""
+        # If this is the initial setting (old_synth is empty), scroll to it.
+        if not old_synth and current_synth:
+            self.call_after_refresh(self._scroll_to_current)
+            return
+
         # Remove highlight from old selection.
         if old_synth:
             try:
@@ -92,6 +104,16 @@ class SynthListPanel(Widget):
                 new_widget.scroll_visible()
             except Exception:
                 pass  # New synth widget might not exist yet.
+
+    def _scroll_to_current(self) -> None:
+        """Scroll to make the current synth visible."""
+        if self.current_synth:
+            try:
+                selected_widget = self.query_one(f'#synth-{self.current_synth}', Static)
+                selected_widget.add_class('selected-synth')
+                selected_widget.scroll_visible()
+            except Exception:
+                pass  # Widget might not exist yet.
 
 
 class TuningPanel(Widget):
