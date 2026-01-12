@@ -59,6 +59,25 @@ class SynthPanel(Widget):
         yield Static(f'Current Synth: {self.synth_name}')
 
 
+class SynthListPanel(Widget):
+    """Panel for displaying the list of available synths with current selection highlighted."""
+
+    available_synths = reactive[list[str]](list, recompose=True)
+    current_synth = reactive("", recompose=True)
+
+    def compose(self) -> ComposeResult:
+        if not self.available_synths:
+            yield Static('No synths available')
+        else:
+            lines = ['Available Synths:']
+            for synth_name in self.available_synths:
+                if synth_name == self.current_synth:
+                    lines.append(f'  > {synth_name}')
+                else:
+                    lines.append(f'    {synth_name}')
+            yield Static('\n'.join(lines))
+
+
 class TuningPanel(Widget):
     """Panel for displaying the currently selected tuning."""
 
@@ -166,6 +185,12 @@ class SerpentoneApp(App):
         padding: 1;
     }
 
+    #synth-list-container {
+        height: 1fr;
+        border: solid cyan;
+        padding: 1;
+    }
+
     SynthPanel {
         width: 100%;
         height: 100%;
@@ -190,6 +215,11 @@ class SerpentoneApp(App):
         width: 100%;
         height: 100%;
     }
+
+    SynthListPanel {
+        width: 100%;
+        height: 100%;
+    }
     """
 
     current_synth = reactive[str]('')
@@ -197,12 +227,20 @@ class SerpentoneApp(App):
     current_octave = reactive[int](0)
     status_messages = reactive[list[str]](list)
     notes = reactive[dict](dict)
+    available_synths = reactive[list[str]](list)
+    synth_index = reactive[int](0)
 
-    def __init__(self, init, polyphony_manager: PolyphonyManager):
+    def __init__(self, init, polyphony_manager: PolyphonyManager, available_synths: list[str]):
         super().__init__()
         self.init = init
         self.polyphony_manager = polyphony_manager
+        self.available_synths = available_synths
         self.current_synth = polyphony_manager.theory.synthdef.name or '(none)'
+        # Find the index of the current synth.
+        try:
+            self.synth_index = available_synths.index(self.current_synth)
+        except ValueError:
+            self.synth_index = 0
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
@@ -217,6 +255,11 @@ class SerpentoneApp(App):
             yield StatusPanel().data_bind(messages=type(self).status_messages)
         with Container(id="note-container"):
             yield NotePanel().data_bind(active_notes=type(self).notes)
+        with Container(id="synth-list-container"):
+            yield SynthListPanel().data_bind(
+                available_synths=type(self).available_synths,
+                current_synth=type(self).current_synth
+            )
 
     def on_mount(self) -> None:
         """Handle app mount."""
@@ -276,16 +319,21 @@ class SerpentoneApp(App):
             self.current_octave = message.input_handler.octave
             return
 
-        # Handle synth changes
+        # Handle synth changes (cycling through available synths)
         if message.key_char == 'c':
-            self.polyphony_manager.theory.synthdef = synths.default
-            self.current_synth = 'default'
+            # Cycle backward
+            self.synth_index = (self.synth_index - 1) % len(self.available_synths)
+            synth_name = self.available_synths[self.synth_index]
+            self.polyphony_manager.theory.synthdef = getattr(synths, synth_name)
+            self.current_synth = synth_name
+            return
         if message.key_char == 'v':
-            self.polyphony_manager.theory.synthdef = synths.simple_sine
-            self.current_synth = 'simple_sine'
-        if message.key_char == 'b':
-            self.polyphony_manager.theory.synthdef = synths.mockingboard
-            self.current_synth = 'mockingboard'
+            # Cycle forward
+            self.synth_index = (self.synth_index + 1) % len(self.available_synths)
+            synth_name = self.available_synths[self.synth_index]
+            self.polyphony_manager.theory.synthdef = getattr(synths, synth_name)
+            self.current_synth = synth_name
+            return
 
         # Handle tuning changes
         if message.key_char == 'n':

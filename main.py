@@ -13,13 +13,34 @@ from tui import SerpentoneApp, AppDispatch
 from tuning import EqualTemperament
 
 
+def get_available_synths() -> list[str]:
+    """
+    Get the canonical list of available synth names by introspecting the synths module.
+    Returns all SynthDef objects found in the module.
+    """
+    synth_names = []
+    for name in dir(synths):
+        # Skip private/magic attributes.
+        if name.startswith('_'):
+            continue
+        attr = getattr(synths, name)
+        # Check if it's a SynthDef instance.
+        if isinstance(attr, supriya.SynthDef):
+            synth_names.append(name)
+    return synth_names
+
+
 def run(input_handlers: list[InputHandler], synth) -> None:
     """
     Run the script with TUI.
     """
+    # Get the canonical list of available synths.
+    available_synths = get_available_synths()
+
     def load_synthdefs() -> None:
         """Load all synthdefs from the synths module into SuperCollider."""
-        server.add_synthdefs(synths.simple_sine, synths.mockingboard, synths.default)
+        synthdef_objects = [getattr(synths, name) for name in available_synths]
+        server.add_synthdefs(*synthdef_objects)
         server.sync()  # Wait for the synthdef to load before moving on.
 
     def on_boot(*args) -> None:  # Run this during server.boot().
@@ -79,7 +100,7 @@ def run(input_handlers: list[InputHandler], synth) -> None:
         server=server,
         theory=theory,
     )
-    app = SerpentoneApp(start_server_and_listener, polyphony)
+    app = SerpentoneApp(start_server_and_listener, polyphony, available_synths)
     app_dispatch = AppDispatch(app)
     app.current_tuning = 'EqualTemperament'
     # Set initial octave if using QwertyHandler
