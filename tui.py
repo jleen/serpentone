@@ -179,14 +179,19 @@ class SerpentoneApp(App):
         padding: 1;
     }
 
-    #note-container {
+    #bottom-row {
+        layout: horizontal;
         height: 1fr;
+    }
+
+    #note-container {
+        width: 1fr;
         border: solid blue;
         padding: 1;
     }
 
     #synth-list-container {
-        height: 1fr;
+        width: 1fr;
         border: solid cyan;
         padding: 1;
     }
@@ -253,13 +258,14 @@ class SerpentoneApp(App):
                 yield OctavePanel().data_bind(octave=type(self).current_octave)
         with Container(id="status-container"):
             yield StatusPanel().data_bind(messages=type(self).status_messages)
-        with Container(id="note-container"):
-            yield NotePanel().data_bind(active_notes=type(self).notes)
-        with Container(id="synth-list-container"):
-            yield SynthListPanel().data_bind(
-                available_synths=type(self).available_synths,
-                current_synth=type(self).current_synth
-            )
+        with Container(id="bottom-row"):
+            with Container(id="note-container"):
+                yield NotePanel().data_bind(active_notes=type(self).notes)
+            with Container(id="synth-list-container"):
+                yield SynthListPanel().data_bind(
+                    available_synths=type(self).available_synths,
+                    current_synth=type(self).current_synth
+                )
 
     def on_mount(self) -> None:
         """Handle app mount."""
