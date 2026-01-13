@@ -7,11 +7,11 @@ from typing import Protocol
 
 import rtmidi.midiconstants
 from textual.app import App, ComposeResult
-from textual.containers import Container, VerticalScroll
+from textual.containers import Container
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Static
+from textual.widgets import ListView, ListItem, Label, Static
 
 import synths
 from tuning import EqualTemperament, JustIntonation, Pythagorean
@@ -66,54 +66,35 @@ class SynthListPanel(Widget):
     current_synth = reactive("", recompose=False)
 
     def compose(self) -> ComposeResult:
-        with VerticalScroll(id="synth-scroll"):
+        with ListView(id="synth-list"):
             if not self.available_synths:
-                yield Static('No synths available')
+                yield ListItem(Label('No synths available'))
             else:
                 for synth_name in self.available_synths:
-                    # Add initial highlighting class if this is the current synth.
-                    classes = 'selected-synth' if synth_name == self.current_synth else ''
-                    yield Static(f'  {synth_name}', id=f'synth-{synth_name}', classes=classes)
+                    yield ListItem(Label(synth_name), id=f'synth-{synth_name}')
 
     def watch_available_synths(self, available_synths: list[str]) -> None:
-        """When synths list changes, ensure current selection is highlighted."""
-        # After recomposition, apply highlighting to current synth.
-        if self.current_synth:
-            self.call_after_refresh(self._scroll_to_current)
+        """When synths list changes, update the selection."""
+        # After recomposition, set the current synth index.
+        if self.current_synth and available_synths:
+            self.call_after_refresh(self._update_selection)
 
     def watch_current_synth(self, old_synth: str, current_synth: str) -> None:
         """Update highlighting when selection changes."""
-        # If this is the initial setting (old_synth is empty), scroll to it.
-        if not old_synth and current_synth:
-            self.call_after_refresh(self._scroll_to_current)
+        self.call_after_refresh(self._update_selection)
+
+    def _update_selection(self) -> None:
+        """Update the ListView selection to match current_synth."""
+        if not self.current_synth or not self.available_synths:
             return
 
-        # Remove highlight from old selection.
-        if old_synth:
-            try:
-                old_widget = self.query_one(f'#synth-{old_synth}', Static)
-                old_widget.remove_class('selected-synth')
-            except Exception:
-                pass  # Old synth widget might not exist.
-
-        # Add highlight to new selection and scroll to it.
-        if current_synth:
-            try:
-                new_widget = self.query_one(f'#synth-{current_synth}', Static)
-                new_widget.add_class('selected-synth')
-                new_widget.scroll_visible()
-            except Exception:
-                pass  # New synth widget might not exist yet.
-
-    def _scroll_to_current(self) -> None:
-        """Scroll to make the current synth visible."""
-        if self.current_synth:
-            try:
-                selected_widget = self.query_one(f'#synth-{self.current_synth}', Static)
-                selected_widget.add_class('selected-synth')
-                selected_widget.scroll_visible()
-            except Exception:
-                pass  # Widget might not exist yet.
+        list_view = self.query_one('#synth-list', ListView)
+        # Find the index of the current synth.
+        try:
+            synth_index = self.available_synths.index(self.current_synth)
+            list_view.index = synth_index
+        except ValueError:
+            pass  # Synth not in list.
 
 
 class TuningPanel(Widget):
@@ -264,8 +245,8 @@ class SerpentoneApp(App):
         height: 100%;
     }
 
-    .selected-synth {
-        background: $accent;
+    ListView {
+        height: 100%;
     }
     """
 
@@ -313,6 +294,18 @@ class SerpentoneApp(App):
         """Handle app mount."""
         self.title = "Serpentone"
         self.init()
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        """Handle synth selection from ListView."""
+        # Get the synth name from the ListItem's id.
+        item_id = event.item.id
+        if item_id and item_id.startswith('synth-'):
+            synth_name = item_id[6:]  # Remove 'synth-' prefix.
+            if synth_name in self.available_synths:
+                # Update the synth index and current synth.
+                self.synth_index = self.available_synths.index(synth_name)
+                self.polyphony_manager.theory.synthdef = getattr(synths, synth_name)
+                self.current_synth = synth_name
 
     def add_status(self, message: str) -> None:
         """Add a status message."""

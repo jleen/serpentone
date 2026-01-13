@@ -30,6 +30,20 @@ def get_available_synths() -> list[str]:
     return synth_names
 
 
+def reload_synth_module():
+    """
+    Reload the synths module.
+    """
+    # Get the old list of synths before reloading.
+    old_synths = get_available_synths()
+    # Remove old synthdef attributes from the module to ensure clean reload.
+    for name in old_synths:
+        if hasattr(synths, name):
+            delattr(synths, name)
+    # Reload the synths module.
+    importlib.reload(synths)
+    
+
 def run(input_handlers: list[InputHandler], synth) -> None:
     """
     Run the script with TUI.
@@ -50,38 +64,26 @@ def run(input_handlers: list[InputHandler], synth) -> None:
 
     def on_synths_changed() -> None:
         """Callback when synths.py file changes - hot reload the module."""
+        reload_synth_module()
+        new_available_synths = get_available_synths()
+        load_synthdefs()
+        # Update the current synthdef reference if it was reloaded.
+        current_synth_name = polyphony.theory.synthdef.name
+        if current_synth_name and hasattr(synths, current_synth_name):
+            polyphony.theory.synthdef = getattr(synths, current_synth_name)
+        else:
+            # Current synth no longer exists, fall back to "default".
+            polyphony.theory.synthdef = synths.default
+            current_synth_name = 'default'
+            app.current_synth = 'default'
+        # Update the TUI's list of available synths.
+        app.available_synths = new_available_synths
+        # Update the synth index to match the current synth.
         try:
-            # Get the old list of synths before reloading.
-            old_synths = get_available_synths()
-            # Remove old synthdef attributes from the module to ensure clean reload.
-            for name in old_synths:
-                if hasattr(synths, name):
-                    delattr(synths, name)
-            # Reload the synths module.
-            importlib.reload(synths)
-            # Get the updated list of available synths.
-            new_available_synths = get_available_synths()
-            # Reload synthdefs into SuperCollider.
-            load_synthdefs()
-            # Update the current synthdef reference if it was reloaded.
-            current_synth_name = polyphony.theory.synthdef.name
-            if current_synth_name and hasattr(synths, current_synth_name):
-                polyphony.theory.synthdef = getattr(synths, current_synth_name)
-            else:
-                # Current synth no longer exists, fall back to "default".
-                polyphony.theory.synthdef = synths.default
-                current_synth_name = 'default'
-                app.current_synth = 'default'
-            # Update the TUI's list of available synths.
-            app.available_synths = new_available_synths
-            # Update the synth index to match the current synth.
-            try:
-                app.synth_index = new_available_synths.index(current_synth_name)
-            except ValueError:
-                app.synth_index = 0
-            app.add_status('Synths reloaded from synths.py')
-        except Exception as e:
-            app.add_status(f'Error reloading synths: {e}')
+            app.synth_index = new_available_synths.index(current_synth_name)
+        except ValueError:
+            app.synth_index = 0
+        app.add_status('Synths reloaded from synths.py')
 
     def on_quitting(*args) -> None:
         """
