@@ -58,32 +58,25 @@ def run(input_handlers: list[InputHandler], synth) -> None:
         server.add_synthdefs(*synthdef_objects)
         server.sync()  # Wait for the synthdef to load before moving on.
 
-    def on_boot(*args) -> None:  # Run this during server.boot().
+    def on_boot(*args) -> None:
+        """Callback when Supercollider boots."""
         load_synthdefs()
-        app.add_status('Server booted successfully')
+        app.add_status('Supercollider server booted successfully')
 
     def on_synths_changed() -> None:
         """Callback when synths.py file changes - hot reload the module."""
         reload_synth_module()
-        new_available_synths = get_available_synths()
         load_synthdefs()
         # Update the current synthdef reference if it was reloaded.
         current_synth_name = polyphony.theory.synthdef.name
         if current_synth_name and hasattr(synths, current_synth_name):
             polyphony.theory.synthdef = getattr(synths, current_synth_name)
         else:
-            # Current synth no longer exists, fall back to "default".
+            # Current synth no longer exists. Fall back to "default".
             polyphony.theory.synthdef = synths.default
-            current_synth_name = 'default'
             app.current_synth = 'default'
-        # Update the TUI's list of available synths.
-        app.available_synths = new_available_synths
-        # Update the synth index to match the current synth.
-        try:
-            app.synth_index = new_available_synths.index(current_synth_name)
-        except ValueError:
-            app.synth_index = 0
-        app.add_status('Synths reloaded from synths.py')
+        app.available_synths = get_available_synths()
+        #app.current_synth = current_synth_name or '(none)'
 
     def on_quitting(*args) -> None:
         """

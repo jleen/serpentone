@@ -25,7 +25,7 @@ class QwertyState(Protocol):
 class AppDispatch:
     """Dispatches input events the Serpentone app, handling thread-safety."""
 
-    def __init__(self, app: 'SerpentoneApp'):
+    def __init__(self, app: SerpentoneApp):
         self.app = app
 
     def handle_midi_event(self, func: int, note_number: int, velocity: int) -> None:
@@ -71,7 +71,10 @@ class SynthListPanel(Widget):
                 yield ListItem(Label('No synths available'))
             else:
                 for synth_name in self.available_synths:
-                    yield ListItem(Label(synth_name), id=f'synth-{synth_name}')
+                    item = ListItem(Label(synth_name), id=f'synth-{synth_name}')
+                    if synth_name == self.current_synth:
+                        item.highlighted = True
+                    yield item
 
     def watch_available_synths(self, available_synths: list[str]) -> None:
         """When synths list changes, update the selection."""
@@ -85,16 +88,10 @@ class SynthListPanel(Widget):
 
     def _update_selection(self) -> None:
         """Update the ListView selection to match current_synth."""
-        if not self.current_synth or not self.available_synths:
-            return
-
         list_view = self.query_one('#synth-list', ListView)
         # Find the index of the current synth.
-        try:
-            synth_index = self.available_synths.index(self.current_synth)
-            list_view.index = synth_index
-        except ValueError:
-            pass  # Synth not in list.
+        synth_index = self.available_synths.index(self.current_synth)
+        list_view.index = synth_index
 
 
 class TuningPanel(Widget):
