@@ -67,6 +67,7 @@ class SynthListPanel(Widget):
     """
 
     available_synths = reactive[list[str]](list)
+    app: SerpentoneApp
 
     @staticmethod
     def make_synth_list_item(synth_name: str) -> ListItem:
@@ -116,9 +117,28 @@ class SynthListPanel(Widget):
                 insert_index += 1
                 j += 1
         
+        # Remember the currently highlighted synth name before modifications.
+        current_highlight = None
+        if self.synth_list.highlighted_child:
+            item_id = self.synth_list.highlighted_child.id
+            if item_id and item_id.startswith('synth-'):
+                current_highlight = item_id[6:]  # Remove 'synth-' prefix.
+
         await self.synth_list.remove_items(removes)
         for (idx, item) in inserts:
             await self.synth_list.insert(idx, [self.make_synth_list_item(item)])
+
+        # Restore highlight to the same synth if it still exists.
+        if current_highlight and current_highlight in new:
+            new_index = new.index(current_highlight)
+            self.synth_list.index = new_index
+        else:
+            # Ensure index is valid after removals/inserts.
+            current_index = self.synth_list.index
+            if current_index is not None and current_index >= len(new):
+                self.synth_list.index = max(0, len(new) - 1)
+            if self.synth_list.highlighted_child:
+                self.app.activate_synth(self.synth_list.highlighted_child)
 
 
 class TuningPanel(Widget):
@@ -319,15 +339,17 @@ class SerpentoneApp(App):
             return
 
         # Get the synth name from the ListItem's id.
-        item_id = event.item.id
+        self.activate_synth(event.item)
+
+    def activate_synth(self, item: ListItem):
+        item_id = item.id
         if item_id and item_id.startswith('synth-'):
             synth_name = item_id[6:]  # Remove 'synth-' prefix.
-            if synth_name in self.available_synths:
-                # Update the actual synth being used.
-                self.polyphony_manager.theory.synthdef = getattr(synths, synth_name)
-                # Update the SynthPanel display.
-                synth_panel = self.query_one(SynthPanel)
-                synth_panel.synth_name = synth_name
+            # Update the actual synth being used.
+            self.polyphony_manager.theory.synthdef = getattr(synths, synth_name)
+            # Update the SynthPanel display.
+            synth_panel = self.query_one(SynthPanel)
+            synth_panel.synth_name = synth_name
 
     def add_status(self, message: str) -> None:
         """Add a status message."""
