@@ -67,16 +67,7 @@ def run(input_handlers: list[InputHandler], synth) -> None:
         """Callback when synths.py file changes - hot reload the module."""
         reload_synth_module()
         load_synthdefs()
-        # Update the current synthdef reference if it was reloaded.
-        current_synth_name = polyphony.theory.synthdef.name
-        if current_synth_name and hasattr(synths, current_synth_name):
-            polyphony.theory.synthdef = getattr(synths, current_synth_name)
-        else:
-            # Current synth no longer exists. Fall back to "default".
-            polyphony.theory.synthdef = synths.default
-            app.current_synth = 'default'
         app.available_synths = get_available_synths()
-        #app.current_synth = current_synth_name or '(none)'
 
     def on_quitting(*args) -> None:
         """

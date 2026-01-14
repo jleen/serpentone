@@ -60,38 +60,64 @@ class SynthPanel(Widget):
 
 
 class SynthListPanel(Widget):
-    """Panel for displaying the list of available synths with current selection highlighted."""
+    """Panel for displaying the list of available synths with current selection highlighted.
 
-    available_synths = reactive[list[str]](list, recompose=True)
-    current_synth = reactive("", recompose=False)
+    ListView is the single source of truth for the current selection.
+    """
 
+    available_synths = reactive[list[str]](list)
+
+    @staticmethod
+    def make_synth_list_item(synth_name: str) -> ListItem:
+        return ListItem(Label(synth_name), id=f'synth-{synth_name}')
+    
     def compose(self) -> ComposeResult:
-        with ListView(id="synth-list"):
-            if not self.available_synths:
-                yield ListItem(Label('No synths available'))
-            else:
-                for synth_name in self.available_synths:
-                    item = ListItem(Label(synth_name), id=f'synth-{synth_name}')
-                    if synth_name == self.current_synth:
-                        item.highlighted = True
-                    yield item
+        self.synth_list = ListView(id="synth-list")
+        with self.synth_list:
+            for synth_name in sorted(self.available_synths):
+                yield self.make_synth_list_item(synth_name)
 
-    def watch_available_synths(self, available_synths: list[str]) -> None:
-        """When synths list changes, update the selection."""
-        # After recomposition, set the current synth index.
-        if self.current_synth and available_synths:
-            self.call_after_refresh(self._update_selection)
+    async def watch_available_synths(self, old, new):
+        old = sorted(old)
+        new = sorted(new)
 
-    def watch_current_synth(self, old_synth: str, current_synth: str) -> None:
-        """Update highlighting when selection changes."""
-        self.call_after_refresh(self._update_selection)
-
-    def _update_selection(self) -> None:
-        """Update the ListView selection to match current_synth."""
-        list_view = self.query_one('#synth-list', ListView)
-        # Find the index of the current synth.
-        synth_index = self.available_synths.index(self.current_synth)
-        list_view.index = synth_index
+        removes = []
+        inserts = []
+        
+        i, j = 0, 0
+        # Track the current index in "old after removals"
+        insert_index = 0
+        
+        while i < len(old) or j < len(new):
+            if i >= len(old):
+                # Only new items left - insert at end
+                inserts.append((insert_index, new[j]))
+                insert_index += 1
+                j += 1
+            elif j >= len(new):
+                # Only old items left - remove them
+                removes.append(i)
+                i += 1
+                # insert_index unchanged (we're removing, not keeping)
+            elif old[i] == new[j]:
+                # Items match - this stays in the list
+                i += 1
+                j += 1
+                insert_index += 1
+            elif old[i] < new[j]:
+                # Item removed from old
+                removes.append(i)
+                i += 1
+                # insert_index unchanged
+            else:  # old[i] > new[j]
+                # Item added in new
+                inserts.append((insert_index, new[j]))
+                insert_index += 1
+                j += 1
+        
+        await self.synth_list.remove_items(removes)
+        for (idx, item) in inserts:
+            await self.synth_list.insert(idx, [self.make_synth_list_item(item)])
 
 
 class TuningPanel(Widget):
@@ -247,31 +273,23 @@ class SerpentoneApp(App):
     }
     """
 
-    current_synth = reactive[str]('')
     current_tuning = reactive[str]('')
     current_octave = reactive[int](0)
     status_messages = reactive[list[str]](list)
     notes = reactive[dict](dict)
     available_synths = reactive[list[str]](list)
-    synth_index = reactive[int](0)
 
     def __init__(self, init, polyphony_manager: PolyphonyManager, available_synths: list[str]):
         super().__init__()
         self.init = init
         self.polyphony_manager = polyphony_manager
         self.available_synths = available_synths
-        self.current_synth = polyphony_manager.theory.synthdef.name or '(none)'
-        # Find the index of the current synth.
-        try:
-            self.synth_index = available_synths.index(self.current_synth)
-        except ValueError:
-            self.synth_index = 0
 
     def compose(self) -> ComposeResult:
         """Create child widgets."""
         with Container(id="synth-tuning-row"):
             with Container(id="synth-container"):
-                yield SynthPanel().data_bind(synth_name=type(self).current_synth)
+                yield SynthPanel()
             with Container(id="tuning-container"):
                 yield TuningPanel().data_bind(tuning_name=type(self).current_tuning)
             with Container(id="octave-container"):
@@ -283,13 +301,15 @@ class SerpentoneApp(App):
                 yield NotePanel().data_bind(active_notes=type(self).notes)
             with Container(id="synth-list-container"):
                 yield SynthListPanel().data_bind(
-                    available_synths=type(self).available_synths,
-                    current_synth=type(self).current_synth
+                    available_synths=type(self).available_synths
                 )
 
     def on_mount(self) -> None:
         """Handle app mount."""
         self.title = "Serpentone"
+        # Initialize SynthPanel with the current synth from the polyphony manager.
+        synth_panel = self.query_one(SynthPanel)
+        synth_panel.synth_name = self.polyphony_manager.theory.synthdef.name or '(none)'
         self.init()
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
@@ -299,10 +319,11 @@ class SerpentoneApp(App):
         if item_id and item_id.startswith('synth-'):
             synth_name = item_id[6:]  # Remove 'synth-' prefix.
             if synth_name in self.available_synths:
-                # Update the synth index and current synth.
-                self.synth_index = self.available_synths.index(synth_name)
+                # Update the actual synth being used.
                 self.polyphony_manager.theory.synthdef = getattr(synths, synth_name)
-                self.current_synth = synth_name
+                # Update the SynthPanel display.
+                synth_panel = self.query_one(SynthPanel)
+                synth_panel.synth_name = synth_name
 
     def add_status(self, message: str) -> None:
         """Add a status message."""
@@ -359,18 +380,14 @@ class SerpentoneApp(App):
 
         # Handle synth changes (cycling through available synths)
         if message.key_char == 'c':
-            # Cycle backward
-            self.synth_index = (self.synth_index - 1) % len(self.available_synths)
-            synth_name = self.available_synths[self.synth_index]
-            self.polyphony_manager.theory.synthdef = getattr(synths, synth_name)
-            self.current_synth = synth_name
+            synth_list = self.query_one('#synth-list', ListView)
+            synth_list.action_cursor_up()
+            synth_list.action_select_cursor()
             return
         if message.key_char == 'v':
-            # Cycle forward
-            self.synth_index = (self.synth_index + 1) % len(self.available_synths)
-            synth_name = self.available_synths[self.synth_index]
-            self.polyphony_manager.theory.synthdef = getattr(synths, synth_name)
-            self.current_synth = synth_name
+            synth_list = self.query_one('#synth-list', ListView)
+            synth_list.action_cursor_down()
+            synth_list.action_select_cursor()
             return
 
         # Handle tuning changes
