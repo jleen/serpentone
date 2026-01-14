@@ -77,7 +77,7 @@ class SynthListPanel(Widget):
         with self.synth_list:
             for synth_name in sorted(self.available_synths):
                 yield self.make_synth_list_item(synth_name)
-
+    
     async def watch_available_synths(self, old, new):
         old = sorted(old)
         new = sorted(new)
@@ -313,7 +313,7 @@ class SerpentoneApp(App):
         synth_panel.synth_name = self.polyphony_manager.theory.synthdef.name or '(none)'
         self.init()
 
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         """Handle synth selection from ListView."""
         # Get the synth name from the ListItem's id.
         item_id = event.item.id
@@ -369,12 +369,10 @@ class SerpentoneApp(App):
         if event.character == 'c':
             synth_list = self.query_one('#synth-list', ListView)
             synth_list.action_cursor_up()
-            synth_list.action_select_cursor()
             return
         if event.character == 'v':
             synth_list = self.query_one('#synth-list', ListView)
             synth_list.action_cursor_down()
-            synth_list.action_select_cursor()
             return
 
         # Handle tuning changes.
