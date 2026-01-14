@@ -24,7 +24,7 @@ class QwertyState(Protocol):
 
 
 class AppDispatch:
-    """Dispatches input events the Serpentone app, handling thread-safety."""
+    """Dispatches input events to the Serpentone app, handling thread-safety."""
 
     def __init__(self, app: SerpentoneApp):
         self.app = app
@@ -80,6 +80,10 @@ class SynthListPanel(Widget):
                 yield self.make_synth_list_item(synth_name)
     
     async def watch_available_synths(self, old, new):
+        """
+        When a new synth list comes in, transform the ListView items into the new list,
+        performing a minimal series of edits so as to mostly not mess up the integrity of the UI state.
+        """
         old = sorted(old)
         new = sorted(new)
 
