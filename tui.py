@@ -1,6 +1,7 @@
 """
 TUI components.
 """
+from textual.events import Key
 from play import PolyphonyManager
 from dataclasses import dataclass
 from typing import Protocol
@@ -362,6 +363,38 @@ class SerpentoneApp(App):
                 del self.notes[message.note_number]
             self.mutate_reactive(SerpentoneApp.notes)
 
+    def on_key(self, event: Key):
+        """Handle configuration keypresses through the normal Textual path (not pynput)."""
+        # Handle synth changes (cycling through available synths).
+        if event.character == 'c':
+            synth_list = self.query_one('#synth-list', ListView)
+            synth_list.action_cursor_up()
+            synth_list.action_select_cursor()
+            return
+        if event.character == 'v':
+            synth_list = self.query_one('#synth-list', ListView)
+            synth_list.action_cursor_down()
+            synth_list.action_select_cursor()
+            return
+
+        # Handle tuning changes.
+        if event.character == 'n':
+            self.polyphony_manager.theory.tuning = JustIntonation(key='A')
+            self.current_tuning = 'JustA'
+        if event.character == 'm':
+            self.polyphony_manager.theory.tuning = EqualTemperament()
+            self.current_tuning = 'EqualTemperament'
+        if event.character == ',':
+            self.polyphony_manager.theory.tuning = JustIntonation(key='C')
+            self.current_tuning = 'JustC'
+        if event.character == '.':
+            self.polyphony_manager.theory.tuning = Pythagorean(key='C')
+            self.current_tuning = 'PythC'
+        if event.character == '/':
+            self.polyphony_manager.theory.tuning = Pythagorean(key='A')
+            self.current_tuning = 'PythA'
+
+
     def on_serpentone_app_handle_key_press(self, message: HandleKeyPress) -> None:
         """Handle QWERTY key press."""
 
@@ -377,35 +410,6 @@ class SerpentoneApp(App):
             message.input_handler.octave = min(message.input_handler.octave + 1, 10)
             self.current_octave = message.input_handler.octave
             return
-
-        # Handle synth changes (cycling through available synths)
-        if message.key_char == 'c':
-            synth_list = self.query_one('#synth-list', ListView)
-            synth_list.action_cursor_up()
-            synth_list.action_select_cursor()
-            return
-        if message.key_char == 'v':
-            synth_list = self.query_one('#synth-list', ListView)
-            synth_list.action_cursor_down()
-            synth_list.action_select_cursor()
-            return
-
-        # Handle tuning changes
-        if message.key_char == 'n':
-            self.polyphony_manager.theory.tuning = JustIntonation(key='A')
-            self.current_tuning = 'JustA'
-        if message.key_char == 'm':
-            self.polyphony_manager.theory.tuning = EqualTemperament()
-            self.current_tuning = 'EqualTemperament'
-        if message.key_char == ',':
-            self.polyphony_manager.theory.tuning = JustIntonation(key='C')
-            self.current_tuning = 'JustC'
-        if message.key_char == '.':
-            self.polyphony_manager.theory.tuning = Pythagorean(key='C')
-            self.current_tuning = 'PythC'
-        if message.key_char == '/':
-            self.polyphony_manager.theory.tuning = Pythagorean(key='A')
-            self.current_tuning = 'PythA'
 
         # Handle note playing
         if message.key_char in message.input_handler.presses_to_note_numbers:
