@@ -315,6 +315,9 @@ class SerpentoneApp(App):
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         """Handle synth selection from ListView."""
+        if not event.item:
+            return
+
         # Get the synth name from the ListItem's id.
         item_id = event.item.id
         if item_id and item_id.startswith('synth-'):
