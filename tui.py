@@ -128,21 +128,31 @@ class SynthListPanel(Widget):
             if item_id and item_id.startswith('synth-'):
                 current_highlight = item_id[6:]  # Remove 'synth-' prefix.
 
+        # Clear the index before modifications to prevent ListView from auto-adjusting during removals.
+        self.synth_list.index = None
+
         await self.synth_list.remove_items(removes)
         for (idx, item) in inserts:
             await self.synth_list.insert(idx, [self.make_synth_list_item(item)])
 
         # Restore highlight to the same synth if it still exists.
         if current_highlight and current_highlight in new:
-            new_index = new.index(current_highlight)
-            self.synth_list.index = new_index
+            target_index = new.index(current_highlight)
         else:
-            # Ensure index is valid after removals/inserts.
-            current_index = self.synth_list.index
-            if current_index is not None and current_index >= len(new):
-                self.synth_list.index = max(0, len(new) - 1)
-            if self.synth_list.highlighted_child:
-                self.app.activate_synth(self.synth_list.highlighted_child)
+            # Highlighted synth was removed, find closest valid index.
+            # Since we cleared the index, we can't rely on self.synth_list.index here.
+            # Use the index of the removed item if it was in the middle of the list.
+            if removes:
+                target_index = min(removes[0], len(new) - 1)
+            else:
+                target_index = 0
+
+        # Restore the index to the target position.
+        self.synth_list.index = target_index
+
+        # Sync the synth panel with whatever is now highlighted.
+        if self.synth_list.highlighted_child:
+            self.app.activate_synth(self.synth_list.highlighted_child)
 
 
 class TuningPanel(Widget):
