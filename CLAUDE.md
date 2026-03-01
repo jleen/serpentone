@@ -168,7 +168,6 @@ Test coverage:
 - **Textual:** TUI framework (`App`, `reactive`, `DockView`, `Static`)
 - **pynput:** Keyboard input (`keyboard.Listener`)
 - **python-rtmidi:** MIDI device access (`rtmidi.MidiIn`)
-- **mido:** MIDI message parsing (`mido.Message`)
 - **watchfiles:** File system monitoring (Rust-based, async, cross-platform)
 
 ## Configuration
