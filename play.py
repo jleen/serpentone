@@ -1,25 +1,9 @@
-# Based upon https://github.com/supriya-project/supriya/blob/v25.9b1/examples/keyboard_input/__init__.py
 """
-Keyboard input.
+Classes for managing polyphonic synth events.
 
-Let's play live with either a MIDI keyboard or our QWERTY keyboard.
-
-Invoke with:
-
-..  shell::
-    :cwd: ..
-    :rel: ..
-    :user: josephine
-    :host: laptop
-
-    python -m examples.keyboard_input --help
-
-... to see complete options.
-
-See the :doc:`example documentation </examples/keyboard_input>` for a complete
-explanation.
+Incorporates code from https://github.com/supriya-project/supriya/blob/v25.9b1/examples/keyboard_input/__init__.py
+Copyright (c) 2014-2024 Joséphine Wolf Oberholtzer, MIT License.
 """
-
 from dataclasses import dataclass, field
 
 import supriya

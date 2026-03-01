@@ -1,3 +1,12 @@
+"""
+Routintes and classes for handling input events from the keyboard and from MIDI controllers.
+
+Only handles musical events, not application control.
+
+Incorporates code from https://github.com/supriya-project/supriya/blob/v25.9b1/examples/keyboard_input/__init__.py
+Copyright (c) 2014-2024 Joséphine Wolf Oberholtzer, MIT License.
+"""
+
 import contextlib
 import functools
 from abc import ABC, abstractmethod
