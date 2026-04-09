@@ -5,12 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Current File with Arguments",
+            "name": "Python Debugger: Keyboard Mode",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
+            "program": "main.py",
             "console": "integratedTerminal",
-            "args": "${command:pickArgs}"
-        }
+            "args": "--qwerty",
+            "env": {"TEXTUAL": "debug,devtools"}
+        },
+        {
+            "name": "Python Debugger: MIDI Mode",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "args": "--midi=0",
+            "env": {"TEXTUAL": "debug,devtools"}
+        },
     ]
 }
