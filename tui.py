@@ -401,6 +401,10 @@ class SerpentoneApp(App):
             if message.note_number in self.notes:
                 del self.notes[message.note_number]
             self.mutate_reactive(SerpentoneApp.notes)
+        elif message.func == rtmidi.midiconstants.CONTROL_CHANGE and message.velocity == 127:
+            self.polyphony_manager.sustain_on()
+        elif message.func == rtmidi.midiconstants.CONTROL_CHANGE and message.velocity == 0:
+            self.polyphony_manager.sustain_off()
 
     def on_key(self, event: Key):
         """Handle configuration keypresses through the normal Textual path (not pynput)."""

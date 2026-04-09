@@ -23,13 +23,18 @@ class PolyphonyManager:
 
     # The server to act on.
     server: supriya.Context
+    # Music theory state (tuning and such).
     theory: MusicTheory
-    # A dictionary of MIDI note numbers to synths.
+    # A dictionary of currently sounding MIDI note numbers to synths.
     notes: dict[int, supriya.Synth] = field(default_factory=dict)
+    # A dictionary of pedal-sustained MIDI note numbers to synths.
+    sustained_notes: dict[int, supriya.Synth] = field(default_factory=dict)
     # Target node to add relative to.
     target_node: supriya.Node | None = None
     # Add action to use.
     add_action: supriya.AddAction = supriya.AddAction.ADD_TO_HEAD
+    # The current state of the damper pedal.
+    sustain: bool = False
 
     def free_all(self) -> None:
         """
@@ -57,6 +62,9 @@ class PolyphonyManager:
             synthdef=self.theory.synthdef,
             target_node=self.target_node,
         )
+        # Remove the note from the sustained list so we don’t get multiple copies.
+        if note_number in self.sustained_notes:
+            self.sustained_notes.pop(note_number).free()
 
     def note_off(self, note_number: int) -> None:
         """
@@ -65,8 +73,21 @@ class PolyphonyManager:
         # Bail if we already stopped this note.
         if note_number not in self.notes:
             return
-        # Pop the synth out of the dictionary and free it.
-        self.notes.pop(note_number).free()
+        # Pop the synth out of the dictionary and free it
+        # (or shunt it to the sustained list if the pedal is down).
+        if self.sustain:
+            self.sustained_notes[note_number] = self.notes.pop(note_number)
+        else:
+            self.notes.pop(note_number).free()
+
+    def sustain_on(self) -> None:
+        self.sustain = True
+
+    def sustain_off(self) -> None:
+        self.sustain = False
+        for note_number in list(self.sustained_notes.keys()):
+            self.sustained_notes.pop(note_number).free()
+        
 
 
 @dataclass
