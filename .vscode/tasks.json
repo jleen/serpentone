@@ -1,0 +1,17 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Textual Console",
+            "type": "shell",
+            "command": "uv run textual console",
+            "presentation": {
+                "panel": "dedicated",
+                "group": "textual",
+                "reveal": "always"
+            },
+            "isBackground": true,
+            "problemMatcher": []
+        }
+    ]
+}
